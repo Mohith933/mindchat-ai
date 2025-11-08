@@ -287,6 +287,15 @@ function generateResponse() {
   const nav = document.getElementById('navMenu');
   nav.classList.toggle('show');
 }
+
+// Close menu when clicking any anchor link
+document.querySelectorAll('#navMenu a').forEach(link => {
+  link.addEventListener('click', () => {
+    const nav = document.getElementById('navMenu');
+    nav.classList.remove('show');
+  });
+});
+
 </script>
 </body>
 </html>
