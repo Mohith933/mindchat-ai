@@ -13,38 +13,53 @@
     overflow-x: hidden;
   }
 
-  /* HEADER */
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 40px;
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-  }
+ /* HEADER layout */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
 
-  .logo {
-    font-size: 1.6em;
-    font-weight: 700;
-    background: linear-gradient(90deg, #818cf8, #c084fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+/* LOGO */
+.logo {
+  font-size: 1.6em;
+  font-weight: 700;
+  background: linear-gradient(90deg, #818cf8, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-  nav a {
-    color: #e0e7ff;
-    text-decoration: none;
-    margin: 0 15px;
-    font-weight: 500;
-    transition: 0.3s;
-  }
+/* NAV LINKS */
+nav {
+  display: flex;
+  gap: 15px;
+}
 
-  nav a:hover {
-    color: #c084fc;
-  }
+nav a {
+  color: #e0e7ff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+nav a:hover {
+  color: #c084fc;
+}
+
+/* MENU ICON (hidden on large screens) */
+.menu-icon {
+  display: none;
+  font-size: 1.8em;
+  color: #c084fc;
+  cursor: pointer;
+}
+
 
   /* HERO */
   .hero {
@@ -143,21 +158,47 @@
   html {
     scroll-behavior: smooth;
   }
+  /* Responsive menu */
+@media (max-width: 768px) {
+  nav {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 70px;
+    right: 40px;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 10px;
+    padding: 15px;
+  }
+
+  nav.show {
+    display: flex;
+  }
+
+  .menu-icon {
+    display: block;
+  }
+}
 </style>
 </head>
 
 <body>
   <!-- HEADER -->
-  <header>
-    <div class="logo">🧠 MindChat AI</div>
-    <nav>
-      <a href="#home">Home</a>
-      <a href="#about">About</a>
-      <a href="#features">Features</a>
-      <a href="#demo">Try Demo</a>
-      <a href="#join">Join</a>
-    </nav>
-  </header>
+ <header>
+  <div class="logo">🧠 MindChat AI</div>
+
+  <!-- Hamburger icon -->
+  <div class="menu-icon" onclick="toggleMenu()">☰</div>
+
+  <nav id="navMenu">
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="#features">Features</a>
+    <a href="#demo">Try Demo</a>
+    <a href="#join">Join</a>
+  </nav>
+</header>
+
 
   <!-- HERO -->
   <section id="home" class="hero">
@@ -237,6 +278,10 @@ function generateResponse() {
 
   const random = reflections[Math.floor(Math.random() * reflections.length)];
   response.innerHTML = random;
+}
+  function toggleMenu() {
+  const nav = document.getElementById('navMenu');
+  nav.classList.toggle('show');
 }
 </script>
 </body>
