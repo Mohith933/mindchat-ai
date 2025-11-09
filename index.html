@@ -12,6 +12,23 @@
     color: #f8fafc;
     overflow-x: hidden;
   }
+body.light-theme {
+  background: #ffffff;
+  color: #111827;
+}
+
+body.light-theme header {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+body.light-theme .feature {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .btn {
+  background: linear-gradient(90deg, #4f46e5, #a855f7);
+  color: white;
+}
 
  /* HEADER layout */
 header {
@@ -193,6 +210,7 @@ nav a:hover {
 
   <!-- Hamburger icon -->
   <div class="menu-icon" onclick="toggleMenu()">☰</div>
+<button id="themeToggle" class="btn small">🌙</button>
 
   <nav id="navMenu">
     <a href="#home">Home</a>
@@ -265,6 +283,11 @@ nav a:hover {
   </footer>
 
 <script>
+const toggle = document.getElementById('themeToggle');
+toggle.addEventListener('click', () => {
+  document.body.classList.toggle('light-theme');
+  toggle.textContent = document.body.classList.contains('light-theme') ? '☀️' : '🌙';
+});
 function generateResponse() {
   const input = document.getElementById("userInput").value.trim();
   const response = document.getElementById("response");
