@@ -218,37 +218,76 @@ saveSessionBtn.addEventListener('click', ()=>{
 });      
       
 // Listen session actions (load/delete)      
-sessionsListEl.addEventListener('click', (ev)=>{      
-  const loadId = ev.target.getAttribute('data-load');      
-  const delId = ev.target.getAttribute('data-del');      
-  if(loadId){      
-    // find session & load its messages if present      
-    const s = sessions.find(x=>x.id===loadId);      
-    if(!s) return;      
-    if(s.messages && s.messages.length){      
-      messages = s.messages.slice();      
-      saveMessages();      
-      setActiveSession(loadId);      
-    } else {      
-      // if no messages saved, just set active session      
-      messages = [];      
-      saveMessages();      
-      setActiveSession(loadId);      
-    }      
-  } else if(delId){      
-    if(!confirm('Delete this session?')) return;      
-    sessions = sessions.filter(x=>x.id!==delId);      
-    saveSessions();      
-    if(activeSession === delId){      
-      activeSession = null;      
-      localStorage.removeItem(STORAGE.activeSessionId);      
-      messages = [];      
-      saveMessages();      
-      chatWindow.innerHTML = '';      
-    }      
-    renderSessions();      
-  }      
-});      
+/* ---------- FIXED: Sessions Load/Delete/Scroll + Clear All ---------- */
+
+// handle load / delete buttons inside session list
+sessionsListEl.addEventListener("click", (ev) => {
+  const loadId = ev.target.dataset.load;
+  const delId = ev.target.dataset.del;
+
+  // ✅ LOAD
+  if (loadId) {
+    const s = sessions.find((x) => x.id === loadId);
+    if (!s) return;
+    messages = s.messages ? s.messages.slice() : [];
+    saveMessages();
+    setActiveSession(loadId);
+    renderMessages(); // ensure chat re-renders
+    setTimeout(() => chatWindow.scrollTop = chatWindow.scrollHeight, 50);
+    return;
+  }
+
+  // ✅ DELETE
+  if (delId) {
+    if (!confirm("Delete this session?")) return;
+    sessions = sessions.filter((x) => x.id !== delId);
+    saveSessions();
+    if (activeSession === delId) {
+      activeSession = null;
+      localStorage.removeItem(STORAGE.activeSessionId);
+      messages = [];
+      saveMessages();
+      chatWindow.innerHTML = "";
+    }
+    renderSessions();
+    return;
+  }
+});
+
+// ✅ make chat always auto-scroll after messages append
+const _oldAppendMessage = appendMessage;
+appendMessage = function (text, who, ts) {
+  _oldAppendMessage(text, who, ts);
+  // force scroll to bottom
+  requestAnimationFrame(() => {
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  });
+};
+
+// ✅ clear ALL memory from sidebar button
+document.getElementById("clearMemoryBtn").addEventListener("click", () => {
+  if (!confirm("⚠️ Clear ALL sessions, messages, nodes, and links?")) return;
+  // wipe everything
+  localStorage.removeItem(STORAGE.nodes);
+  localStorage.removeItem(STORAGE.links);
+  localStorage.removeItem(STORAGE.sessions);
+  localStorage.removeItem(STORAGE.messages);
+  localStorage.removeItem(STORAGE.activeSessionId);
+
+  // reset runtime data
+  nodes = [];
+  links = [];
+  sessions = [];
+  messages = [];
+  activeSession = null;
+
+  // refresh UI
+  chatWindow.innerHTML = "";
+  renderSessions();
+  drawGraph();
+  alert("🧹 All MindChat memory cleared!");
+});
+      
       
 /* -------------- Chat UI -------------- */      
 function appendMessage(text, who, ts){      
