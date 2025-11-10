@@ -580,6 +580,83 @@ drawGraph = function() {
 };
 
 console.log("✅ Step 5: Emotional visualization active");  
+/* ---------------- Step 6: Memory Sections & History Loader ---------------- */
+
+const sectionList = document.createElement('div');
+sectionList.id = 'memorySections';
+sectionList.style.cssText = `
+  position: fixed; left: 10px; bottom: 10px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  width: 220px;
+  color: #fff;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+`;
+document.body.appendChild(sectionList);
+
+function loadSections() {
+  sectionList.innerHTML = '<strong style="color:#b8a6ff;">🧩 Memories</strong><br>';
+  const allSessions = JSON.parse(localStorage.getItem('sessions') || '{}');
+  const ids = Object.keys(allSessions);
+  if (ids.length === 0) {
+    sectionList.innerHTML += '<em>No past memories yet.</em>';
+    return;
+  }
+
+  ids.slice(-8).reverse().forEach(id=>{
+    const title = allSessions[id].title || `Memory ${id.slice(0,4)}`;
+    const btn = document.createElement('button');
+    btn.textContent = title;
+    btn.style.cssText = `
+      display:block; width:100%; margin:4px 0; padding:5px 8px;
+      border:none; border-radius:6px;
+      background:#1d1b2b; color:#ccc; text-align:left; cursor:pointer;
+    `;
+    btn.onclick = ()=> loadSession(id);
+    sectionList.appendChild(btn);
+  });
+}
+
+function saveSession(id, title, data) {
+  const sessions = JSON.parse(localStorage.getItem('sessions') || '{}');
+  sessions[id] = { title, data };
+  localStorage.setItem('sessions', JSON.stringify(sessions));
+  loadSections();
+}
+
+function loadSession(id) {
+  const sessions = JSON.parse(localStorage.getItem('sessions') || '{}');
+  if (!sessions[id]) return alert('Memory not found!');
+  const { data } = sessions[id];
+  nodes = data.nodes || [];
+  links = data.links || [];
+  drawGraph();
+  alert(`🧠 Loaded memory: ${sessions[id].title}`);
+}
+
+function createNewSession(title='Untitled Memory') {
+  const id = uid('mem');
+  saveSession(id, title, { nodes, links });
+  alert(`💾 Memory saved as "${title}"`);
+}
+
+// Example: after each conversation or when user clicks “Save Memory”:
+document.addEventListener('keydown', (e)=>{
+  if(e.ctrlKey && e.key==='s'){ 
+    e.preventDefault();
+    const title = prompt('Title for this memory?');
+    createNewSession(title);
+  }
+});
+
+// initial load
+loadSections();
+console.log("✅ Step 6: Memory Sections ready");
       
 </script>      
 </body>      
