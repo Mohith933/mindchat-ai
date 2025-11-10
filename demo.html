@@ -455,6 +455,19 @@
       const loadId = ev.target.dataset.load;
       const delId = ev.target.dataset.del;
 
+          if (!loadId && !delId && target.closest('.session-item')) {
+        const sId = target.closest('.session-item').querySelector('[data-load]')?.dataset.load;
+        if (sId) {
+            const s = sessions.find(x => x.id === sId);
+            if (!s) return;
+            messages = s.messages ? s.messages.slice() : [];
+            saveMessages();
+            setActiveSession(sId);
+            renderMessages();
+            requestAnimationFrame(() => chatWindow.scrollTop = chatWindow.scrollHeight);
+        }
+    }
+
       // ✅ LOAD
       if (loadId) {
         const s = sessions.find((x) => x.id === loadId);
