@@ -580,83 +580,144 @@ drawGraph = function() {
 };
 
 console.log("✅ Step 5: Emotional visualization active");  
-/* ---------------- Step 6: Memory Sections & History Loader ---------------- */
+/* ---------------- Step 6: Memory Sections + Clear Function ---------------- */
 
 const sectionList = document.createElement('div');
 sectionList.id = 'memorySections';
 sectionList.style.cssText = `
-  position: fixed; left: 10px; bottom: 10px;
-  background: rgba(255,255,255,0.08);
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(6px);
   border-radius: 12px;
   padding: 10px;
-  max-height: 220px;
+  max-height: 240px;
   overflow-y: auto;
-  width: 220px;
+  width: 230px;
   color: #fff;
   font-size: 0.9rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 999;
 `;
 document.body.appendChild(sectionList);
 
+// ✅ Memory data structure
 function loadSections() {
-  sectionList.innerHTML = '<strong style="color:#b8a6ff;">🧩 Memories</strong><br>';
-  const allSessions = JSON.parse(localStorage.getItem('sessions') || '{}');
+  sectionList.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <strong style="color:#b8a6ff;">🧩 Memories</strong>
+      <button id="clearMemoryBtn" class="clear-btn small" 
+        style="background:none;border:none;color:#ff8888;cursor:pointer;font-size:1rem;">🧹</button>
+    </div>
+  `;
+
+  const allSessions = JSON.parse(localStorage.getItem("sessions") || "{}");
   const ids = Object.keys(allSessions);
+
   if (ids.length === 0) {
-    sectionList.innerHTML += '<em>No past memories yet.</em>';
+    sectionList.innerHTML += `<em style="color:#aaa;">No memories yet.</em>`;
     return;
   }
 
-  ids.slice(-8).reverse().forEach(id=>{
-    const title = allSessions[id].title || `Memory ${id.slice(0,4)}`;
-    const btn = document.createElement('button');
+  ids.slice(-8).reverse().forEach((id) => {
+    const title = allSessions[id].title || `Memory ${id.slice(0, 4)}`;
+    const wrapper = document.createElement("div");
+    wrapper.style.marginTop = "6px";
+
+    const btn = document.createElement("button");
     btn.textContent = title;
     btn.style.cssText = `
-      display:block; width:100%; margin:4px 0; padding:5px 8px;
-      border:none; border-radius:6px;
-      background:#1d1b2b; color:#ccc; text-align:left; cursor:pointer;
+      display:block;width:100%;
+      border:none;border-radius:6px;
+      padding:6px 8px;
+      background:#1e1b2d;color:#ddd;
+      text-align:left;cursor:pointer;
+      transition:background 0.2s;
     `;
-    btn.onclick = ()=> loadSession(id);
-    sectionList.appendChild(btn);
+    btn.onmouseover = () => (btn.style.background = "#2a2740");
+    btn.onmouseleave = () => (btn.style.background = "#1e1b2d");
+
+    // click shows memory (expanded section)
+    btn.onclick = () => showSessionDetails(id, wrapper);
+
+    wrapper.appendChild(btn);
+    sectionList.appendChild(wrapper);
   });
+
+  // Clear button logic
+  document.getElementById("clearMemoryBtn").onclick = () => {
+    if (confirm("Are you sure you want to clear all memories?")) {
+      localStorage.removeItem("sessions");
+      sectionList.innerHTML += `<p style="color:#aaa;">Memories cleared.</p>`;
+      loadSections();
+    }
+  };
 }
 
+// ✅ Save & Load logic
 function saveSession(id, title, data) {
-  const sessions = JSON.parse(localStorage.getItem('sessions') || '{}');
+  const sessions = JSON.parse(localStorage.getItem("sessions") || "{}");
   sessions[id] = { title, data };
-  localStorage.setItem('sessions', JSON.stringify(sessions));
+  localStorage.setItem("sessions", JSON.stringify(sessions));
   loadSections();
 }
 
-function loadSession(id) {
-  const sessions = JSON.parse(localStorage.getItem('sessions') || '{}');
-  if (!sessions[id]) return alert('Memory not found!');
-  const { data } = sessions[id];
-  nodes = data.nodes || [];
-  links = data.links || [];
-  drawGraph();
-  alert(`🧠 Loaded memory: ${sessions[id].title}`);
-}
-
-function createNewSession(title='Untitled Memory') {
-  const id = uid('mem');
+function createNewSession(title = "Untitled Memory") {
+  const id = uid("mem");
   saveSession(id, title, { nodes, links });
   alert(`💾 Memory saved as "${title}"`);
 }
 
-// Example: after each conversation or when user clicks “Save Memory”:
-document.addEventListener('keydown', (e)=>{
-  if(e.ctrlKey && e.key==='s'){ 
+function showSessionDetails(id, wrapper) {
+  const sessions = JSON.parse(localStorage.getItem("sessions") || "{}");
+  const session = sessions[id];
+  if (!session) return;
+
+  // Remove old detail boxes
+  const old = wrapper.querySelector(".session-details");
+  if (old) old.remove();
+
+  const box = document.createElement("div");
+  box.className = "session-details";
+  box.style.cssText = `
+    background:rgba(255,255,255,0.05);
+    padding:8px;margin-top:4px;border-radius:8px;color:#ccc;
+    font-size:0.85rem;
+  `;
+  box.innerHTML = `
+    <p><strong>🕒 Memory ID:</strong> ${id}</p>
+    <p><strong>💭 Nodes:</strong> ${session.data.nodes?.length || 0}</p>
+    <p><strong>🔗 Links:</strong> ${session.data.links?.length || 0}</p>
+    <button style="margin-top:6px;padding:4px 8px;border:none;
+      background:#544b91;color:white;border-radius:6px;cursor:pointer;">
+      ▶ Load Memory
+    </button>
+  `;
+
+  const loadBtn = box.querySelector("button");
+  loadBtn.onclick = () => {
+    nodes = session.data.nodes || [];
+    links = session.data.links || [];
+    drawGraph();
+    alert(`🧠 Loaded memory: ${session.title}`);
+  };
+
+  wrapper.appendChild(box);
+}
+
+// ✅ Shortcut for saving sessions
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "s") {
     e.preventDefault();
-    const title = prompt('Title for this memory?');
+    const title = prompt("Title for this memory?");
     createNewSession(title);
   }
 });
 
-// initial load
+// Initial load
 loadSections();
-console.log("✅ Step 6: Memory Sections ready");
+console.log("✅ Step 6 Enhanced: Memory System + Clear + Expand ready");
       
 </script>      
 </body>      
