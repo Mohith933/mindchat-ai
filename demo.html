@@ -1,304 +1,586 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MindChat AI — Memory Companion (Step 4)</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#f6f7fb; --text:#111827; --accent:#7b5cff; --muted:#eef0fb;
-}
-@media(prefers-color-scheme:dark){
-  :root{ --bg:#0c0c10; --text:#eef2ff; --accent:#a58dff; --muted:#121217; }
-}
-*{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; padding:0;}
-body{display:flex; min-height:100vh; background:var(--bg); color:var(--text); overflow:hidden;}
-.sidebar{width:260px;background:var(--muted); padding:20px; display:flex; flex-direction:column; gap:12px;}
-.sidebar h2{color:var(--accent); font-size:1.1rem;}
-.sessions{flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px;}
-.session-item{padding:10px; border-radius:8px; cursor:pointer; background:transparent; border:1px solid rgba(0,0,0,0.03);}
-.session-item.active{background:linear-gradient(90deg,var(--accent),#b993ff); color:#fff;}
-.controls{display:flex; gap:8px;}
-.btn{background:var(--accent); color:#fff; border:none; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600;}
-.btn.ghost{background:transparent; color:var(--text); border:1px solid rgba(0,0,0,0.06); font-weight:600;}
-.small{padding:6px 8px; font-size:0.9rem;}
-.main{flex:1; display:flex; flex-direction:column; border-left:1px solid rgba(0,0,0,0.04); border-right:1px solid rgba(0,0,0,0.04);}
-.header{display:flex; justify-content:space-between; align-items:center; padding:18px 22px; background:transparent;}
-.header h1{color:var(--accent); font-size:1.2rem;}
-.container{display:flex; flex:1; gap:12px; padding:16px;}
-.chat-area{flex:1; display:flex; flex-direction:column; background:transparent; min-height:0;}
-.chat-window{flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:10px;}
-.message{max-width:72%; padding:10px 14px; border-radius:12px; line-height:1.45; font-size:15px; box-shadow:0 6px 18px rgba(0,0,0,0.04);}
-.message.user{align-self:flex-end; background:var(--accent); color:#fff;}
-.message.ai{align-self:flex-start; background:#000; border:1px solid rgba(0,0,0,0.06);}
-.meta{font-size:11px; opacity:0.7; margin-top:6px;}
-.input-area{display:flex; gap:10px; padding:12px; background:transparent; align-items:center; border-top:1px solid rgba(0,0,0,0.03);}
-.input-area input{flex:1; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); outline:none;}
-.input-area button{padding:10px 14px; border-radius:10px; border:none; cursor:pointer; background:var(--accent); color:#fff; font-weight:700;}
-.side-graph{width:340px; padding:18px; background:var(--muted); border-radius:10px; display:flex; flex-direction:column; gap:12px; min-width:240px;}
-.graph-canvas{background:#fff; border-radius:10px; width:100%; height:360px; display:block; border:1px solid rgba(0,0,0,0.04);}
-.tooltip{position:absolute;background:#111;color:#fff;padding:6px 8px;border-radius:6px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s;}
-.controls-row{display:flex; gap:8px; align-items:center;}
-.clear-btn{background:#fff; color:var(--accent); border:1px solid var(--accent); padding:8px 10px; border-radius:8px; cursor:pointer;}
-.clear-btn:hover{background:var(--accent); color:#fff;}
-@media(max-width:1000px){
-  .side-graph{display:none;}
-  .sidebar{width:200px;}
-  .session-item{font-size:0.95rem;}
-}
-.small-muted{font-size:12px; opacity:0.7;}
-</style>
-</head>
-<body>
+A one generation code here previous steps 1 to 4 we done here see the code
 
-<!-- SIDEBAR: sessions & quick actions -->
-<div class="sidebar" aria-label="Sessions and memory controls">
-  <h2>🧠 Sessions</h2>
-  <div class="controls">
-    <button id="newSessionBtn" class="btn small">＋ New</button>
-    <button id="saveSessionBtn" class="btn small">Save</button>
-  </div>
-
-  <div class="sessions" id="sessionsList" aria-live="polite">
-    <!-- session items injected -->
-  </div>
-
-  <div style="display:flex; gap:8px; align-items:center;">
-    <button id="exportBtn" class="btn small">Export Chat</button>
-    <button id="clearMemoryBtn" class="clear-btn small">🧹 Clear Memory</button>
-  </div>
-  <div class="small-muted">Memory nodes & links persist locally. Clear will remove them.</div>
+<!DOCTYPE html>      <html lang="en">      
+<head>      
+<meta charset="utf-8" />      
+<meta name="viewport" content="width=device-width,initial-scale=1" />      
+<title>MindChat AI — Memory Companion (Step 4)</title>      
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">      
+<style>      
+:root{      
+  --bg:#f6f7fb; --text:#111827; --accent:#7b5cff; --muted:#eef0fb;      
+}      
+@media(prefers-color-scheme:dark){      
+  :root{ --bg:#0c0c10; --text:#eef2ff; --accent:#a58dff; --muted:#121217; }      
+}      
+*{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; padding:0;}      
+body{display:flex; min-height:100vh; background:var(--bg); color:var(--text); overflow:hidden;}      
+.sidebar{width:260px;background:var(--muted); padding:20px; display:flex; flex-direction:column; gap:12px;}      
+.sidebar h2{color:var(--accent); font-size:1.1rem;}      
+.sessions{flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px;}      
+.session-item{padding:10px; border-radius:8px; cursor:pointer; background:transparent; border:1px solid rgba(0,0,0,0.03);}      
+.session-item.active{background:linear-gradient(90deg,var(--accent),#b993ff); color:#fff;}      
+.controls{display:flex; gap:8px;}      
+.btn{background:var(--accent); color:#fff; border:none; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600;}      
+.btn.ghost{background:transparent; color:var(--text); border:1px solid rgba(0,0,0,0.06); font-weight:600;}      
+.small{padding:6px 8px; font-size:0.9rem;}      
+.main{flex:1; display:flex; flex-direction:column; border-left:1px solid rgba(0,0,0,0.04); border-right:1px solid rgba(0,0,0,0.04);}      
+.header{display:flex; justify-content:space-between; align-items:center; padding:18px 22px; background:transparent;}      
+.header h1{color:var(--accent); font-size:1.2rem;}      
+.container{display:flex; flex:1; gap:12px; padding:16px;}      
+.chat-area{flex:1; display:flex; flex-direction:column; background:transparent; min-height:0;}      
+.chat-window{flex:1; overflow:auto; padding:18px; display:flex; flex-direction:column; gap:10px;}      
+.message{max-width:72%; padding:10px 14px; border-radius:12px; line-height:1.45; font-size:15px; box-shadow:0 6px 18px rgba(0,0,0,0.04);}      
+.message.user{align-self:flex-end; background:var(--accent); color:#fff;}      
+.message.ai{align-self:flex-start; background:#000; border:1px solid rgba(0,0,0,0.06);}      
+.meta{font-size:11px; opacity:0.7; margin-top:6px;}      
+.input-area{display:flex; gap:10px; padding:12px; background:transparent; align-items:center; border-top:1px solid rgba(0,0,0,0.03);}      
+.input-area input{flex:1; padding:12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); outline:none;}      
+.input-area button{padding:10px 14px; border-radius:10px; border:none; cursor:pointer; background:var(--accent); color:#fff; font-weight:700;}      
+.side-graph{width:340px; padding:18px; background:var(--muted); border-radius:10px; display:flex; flex-direction:column; gap:12px; min-width:240px;}      
+.graph-canvas{background:#fff; border-radius:10px; width:100%; height:360px; display:block; border:1px solid rgba(0,0,0,0.04);}      
+.tooltip{position:absolute;background:#111;color:#fff;padding:6px 8px;border-radius:6px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s;}      
+.controls-row{display:flex; gap:8px; align-items:center;}      
+.clear-btn{background:#fff; color:var(--accent); border:1px solid var(--accent); padding:8px 10px; border-radius:8px; cursor:pointer;}      
+.clear-btn:hover{background:var(--accent); color:#fff;}      
+@media(max-width:1000px){      
+  .side-graph{display:none;}      
+  .sidebar{width:200px;}      
+  .session-item{font-size:0.95rem;}      
+}      
+.small-muted{font-size:12px; opacity:0.7;}      
+</style>      
+</head>      
+<body>      <!-- SIDEBAR: sessions & quick actions -->      <div class="sidebar" aria-label="Sessions and memory controls">      
+  <h2>🧠 Sessions</h2>      
+  <div class="controls">      
+    <button id="newSessionBtn" class="btn small">＋ New</button>      
+    <button id="saveSessionBtn" class="btn small">Save</button>      
+  </div>        <div class="sessions" id="sessionsList" aria-live="polite">      
+    <!-- session items injected -->      
+  </div>        <div style="display:flex; gap:8px; align-items:center;">      
+    <button id="exportBtn" class="btn small">Export Chat</button>      
+    <button id="clearMemoryBtn" class="clear-btn small">🧹 Clear Memory</button>      
+  </div>      
+  <div class="small-muted">Memory nodes & links persist locally. Clear will remove them.</div>      
+</div>      <!-- MAIN -->      <div class="main">      
+  <div class="header">      
+    <h1>MindChat AI — Memory Companion</h1>      
+    <div class="controls-row">      
+      <div id="typingIndicator" class="small-muted" style="min-width:120px"></div>      
+      <button id="downloadGraphBtn" class="btn ghost small">Save Graph JSON</button>      
+    </div>      
+  </div>        <div class="container">      
+    <!-- Chat -->      
+    <div class="chat-area" role="main">      
+      <div id="chatWindow" class="chat-window" aria-live="polite">      
+        <!-- messages -->      
+      </div>      <div class="input-area">      
+    <input id="userInput" placeholder="Type your thought... (Ctrl+Enter to send)" aria-label="Type your thought">      
+    <button id="sendBtn">Send</button>      
+  </div>      
+</div>      
+  
+<!-- Graph area -->      
+<div class="side-graph" aria-label="Memory graph">      
+  <h3 style="margin:0;color:var(--accent)">🕸 Memory Graph</h3>      
+  <canvas id="graphCanvas" class="graph-canvas" width="640" height="480"></canvas>      
+  <div style="display:flex; gap:8px;">      
+    <button id="clearGraphBtn" class="clear-btn small">🧹 Clear Memory</button>      
+    <button id="saveNodesBtn" class="btn small ghost">Save Nodes</button>      
+  </div>      
+  <div id="tooltip" class="tooltip" aria-hidden="true"></div>      
 </div>
 
-<!-- MAIN -->
-<div class="main">
-  <div class="header">
-    <h1>MindChat AI — Memory Companion</h1>
-    <div class="controls-row">
-      <div id="typingIndicator" class="small-muted" style="min-width:120px"></div>
-      <button id="downloadGraphBtn" class="btn ghost small">Save Graph JSON</button>
-    </div>
-  </div>
+  </div>      
+</div>      <script>      
+/* ------------------------------      
+  MindChat Step 4 — full JS      
+  Features:      
+   - save/load sessions in sidebar      
+   - timestamps on messages      
+   - typing indicator      
+   - export chat transcript (.txt)      
+   - persistent memory graph (nodes/links) with tooltip      
+   - improved linking (keyword matching)      
+   - clear memory + export JSON      
+-------------------------------*/      
+      
+const chatWindow = document.getElementById('chatWindow');      
+const userInput = document.getElementById('userInput');      
+const sendBtn = document.getElementById('sendBtn');      
+const typingIndicator = document.getElementById('typingIndicator');      
+const exportBtn = document.getElementById('exportBtn');      
+      
+const graphCanvas = document.getElementById('graphCanvas');      
+const ctx = graphCanvas.getContext('2d');      
+const tooltip = document.getElementById('tooltip');      
+      
+const sessionsListEl = document.getElementById('sessionsList');      
+const newSessionBtn = document.getElementById('newSessionBtn');      
+const saveSessionBtn = document.getElementById('saveSessionBtn');      
+const clearGraphBtn = document.getElementById('clearGraphBtn');      
+const downloadGraphBtn = document.getElementById('downloadGraphBtn');      
+const saveNodesBtn = document.getElementById('saveNodesBtn');      
+      
+const STORAGE = {      
+  nodes: 'mindchat_nodes_v4',      
+  links: 'mindchat_links_v4',      
+  sessions: 'mindchat_sessions_v4',      
+  activeSessionId: 'mindchat_active_session_v4',      
+  messages: 'mindchat_messages_v4' // active messages for current session      
+};      
+      
+// in-memory data      
+let nodes = JSON.parse(localStorage.getItem(STORAGE.nodes) || '[]');      
+let links = JSON.parse(localStorage.getItem(STORAGE.links) || '[]');      
+let sessions = JSON.parse(localStorage.getItem(STORAGE.sessions) || '[]'); // array of {id,name,ts}      
+let messages = JSON.parse(localStorage.getItem(STORAGE.messages) || '[]'); // current session messages array      
+let activeSession = localStorage.getItem(STORAGE.activeSessionId) || null;      
+      
+/* ---------------- Helpers ---------------- */      
+function nowISO(){ return new Date().toISOString(); }      
+function nowPretty(){ return new Date().toLocaleString(); }      
+function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }      
+function saveNodes(){ localStorage.setItem(STORAGE.nodes, JSON.stringify(nodes)); }      
+function saveLinks(){ localStorage.setItem(STORAGE.links, JSON.stringify(links)); }      
+function saveSessions(){ localStorage.setItem(STORAGE.sessions, JSON.stringify(sessions)); }      
+function saveMessages(){ localStorage.setItem(STORAGE.messages, JSON.stringify(messages)); }      
+function setActiveSession(id){      
+  activeSession = id;      
+  localStorage.setItem(STORAGE.activeSessionId, id);      
+  renderSessions();      
+  renderMessages();      
+}      
+      
+/* ------------- Sessions UI ------------- */      
+function renderSessions(){      
+  sessionsListEl.innerHTML = '';      
+  if(sessions.length === 0){      
+    const div = document.createElement('div');      
+    div.className = 'session-item';      
+    div.textContent = 'No saved sessions — create one';      
+    sessionsListEl.appendChild(div);      
+    return;      
+  }      
+  sessions.forEach(s=>{      
+    const el = document.createElement('div');      
+    el.className = 'session-item' + (s.id===activeSession ? ' active' : '');      
+    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">      
+      <div><strong>${s.name}</strong><div style="font-size:12px;opacity:.7">${new Date(s.ts).toLocaleString()}</div></div>      
+      <div style="display:flex;gap:6px">      
+        <button class="btn ghost small" data-load="${s.id}">Load</button>      
+        <button class="btn ghost small" data-del="${s.id}">Del</button>      
+      </div>      
+    </div>`;      
+    sessionsListEl.appendChild(el);      
+  });      
+}      
+      
+// New session      
+newSessionBtn.addEventListener('click', ()=>{      
+  const name = prompt('Session name (optional)') || 'Session ' + new Date().toLocaleString();      
+  const id = uid('sess');      
+  const s = { id, name, ts: Date.now() };      
+  sessions.unshift(s);      
+  saveSessions();      
+  // reset messages for new session      
+  messages = [];      
+  saveMessages();      
+  setActiveSession(id);      
+  // also clear chat UI      
+  chatWindow.innerHTML = '';      
+});      
+      
+// Save current session (store messages snapshot)      
+saveSessionBtn.addEventListener('click', ()=>{      
+  if(!activeSession){      
+    alert('Create or load a session first (press New).');      
+    return;      
+  }      
+  const sidx = sessions.findIndex(x=>x.id===activeSession);      
+  if(sidx === -1){      
+    alert('Active session not found — creating new one.');      
+    const id = uid('sess');      
+    sessions.unshift({id, name:'Saved '+nowPretty(), ts: Date.now()});      
+    setActiveSession(id);      
+  }      
+  // attach messages snapshot to session object for quick restore      
+  sessions = sessions.map(s => {      
+    if(s.id === activeSession){      
+      return {...s, messages: messages.slice(), ts: Date.now()};      
+    }      
+    return s;      
+  });      
+  saveSessions();      
+  alert('Session saved locally ✓');      
+  renderSessions();      
+});      
+      
+// Listen session actions (load/delete)      
+sessionsListEl.addEventListener('click', (ev)=>{      
+  const loadId = ev.target.getAttribute('data-load');      
+  const delId = ev.target.getAttribute('data-del');      
+  if(loadId){      
+    // find session & load its messages if present      
+    const s = sessions.find(x=>x.id===loadId);      
+    if(!s) return;      
+    if(s.messages && s.messages.length){      
+      messages = s.messages.slice();      
+      saveMessages();      
+      setActiveSession(loadId);      
+    } else {      
+      // if no messages saved, just set active session      
+      messages = [];      
+      saveMessages();      
+      setActiveSession(loadId);      
+    }      
+  } else if(delId){      
+    if(!confirm('Delete this session?')) return;      
+    sessions = sessions.filter(x=>x.id!==delId);      
+    saveSessions();      
+    if(activeSession === delId){      
+      activeSession = null;      
+      localStorage.removeItem(STORAGE.activeSessionId);      
+      messages = [];      
+      saveMessages();      
+      chatWindow.innerHTML = '';      
+    }      
+    renderSessions();      
+  }      
+});      
+      
+/* -------------- Chat UI -------------- */      
+function appendMessage(text, who, ts){      
+  const el = document.createElement('div');      
+  el.className = 'message ' + (who==='user' ? 'user' : 'ai');      
+  el.innerHTML = `<div>${escapeHtml(text)}</div><div class="meta">${who === 'user' ? 'You' : 'MindChat AI'} • ${new Date(ts).toLocaleTimeString()}</div>`;      
+  chatWindow.appendChild(el);      
+  chatWindow.scrollTop = chatWindow.scrollHeight;      
+}      
+      
+// Safe text -> HTML      
+function escapeHtml(s){      
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');      
+}      
+      
+/* -------------- Typing + AI reply -------------- */      
+let typingTimeout = null;      
+function setTyping(on, text=''){      
+  typingIndicator.textContent = on ? 'MindChat is typing…' : '';      
+}      
+function generateAIReply(userText){      
+  // simple reply templates but improved linking hint      
+  const base = [      
+    "That sounds meaningful — why do you feel that way?",      
+    "I'm linking this with your last thought in memory 🧠",      
+    "Interesting — this connects to something you mentioned earlier.",      
+    "I hear you. Let's keep this memory safe."      
+  ];      
+  return base[Math.floor(Math.random()*base.length)];      
+}      
+      
+/* ------------- Message send flow ------------- */      
+async function sendMessage(){      
+  const text = userInput.value.trim();      
+  if(!text) return;      
+  const ts = Date.now();      
+  // add user message      
+  messages.push({who:'user', text, ts});      
+  saveMessages();      
+  appendMessage(text,'user',ts);      
+  addNodeToGraph(text,'user',ts);      
+  userInput.value = '';      
+  // show typing      
+  setTyping(true);      
+  // small random delay 500-1200ms      
+  const delay = 600 + Math.floor(Math.random()*600);      
+  clearTimeout(typingTimeout);      
+  typingTimeout = setTimeout(()=>{      
+    const reply = generateAIReply(text);      
+    const ts2 = Date.now();      
+    messages.push({who:'ai', text:reply, ts:ts2});      
+    saveMessages();      
+    appendMessage(reply,'ai',ts2);      
+    addNodeToGraph(reply,'ai',ts2);      
+    setTyping(false);      
+  }, delay);      
+}      
+      
+/* allow ctrl+enter or Enter to send */      
+userInput.addEventListener('keydown', (e)=>{      
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ sendMessage(); }      
+});      
+      
+/* wire send button */      
+sendBtn.addEventListener('click', sendMessage);      
+      
+/* ---------------- Graph logic (improved linking) ---------------- */      
+function addNodeToGraph(text, type, ts){      
+  const KW = extractKeywords(text);      
+  // place node near center jitter      
+  const x = 30 + Math.random()*(graphCanvas.width-60);      
+  const y = 30 + Math.random()*(graphCanvas.height-60);      
+  const color = type === 'user' ? '#7b5cff' : '#b8a6ff';      
+  const node = { id: uid('n'), text, ts, x, y, color, dx:(Math.random()-.5)*1.2, dy:(Math.random()-.5)*1.2, keywords: KW };      
+  // link heuristics: link to recent nodes with shared keywords (max 3)      
+  const matches = nodes.filter(n => n.keywords.some(k => KW.includes(k)));      
+  const toLink = matches.slice(-3);      
+  nodes.push(node);      
+  toLink.forEach(m => links.push({ a: m.id, b: node.id }));      
+  // always link to last node if no keyword matches (continuity)      
+  if(toLink.length === 0 && nodes.length > 1){      
+    links.push({ a: nodes[nodes.length-2].id, b: node.id });      
+  }      
+  saveNodes(); saveLinks();      
+  drawGraph();      
+}      
+      
+/* keyword extraction: simple split, remove stopwords, return top short words */      
+const STOP = new Set(['the','and','a','I','to','of','in','on','for','is','it','that','this','with','my','you','me','be']);      
+function extractKeywords(text){      
+  return text.toLowerCase()      
+    .replace(/[^a-z0-9\s]/g,' ')      
+    .split(/\s+/)      
+    .filter(w=>w && !STOP.has(w))      
+    .slice(0,6);      
+}      
+      
+/* ----- persistent nodes/links load on start (map id->node) ----- */      
+nodes = nodes.map((n)=> {      
+  // migrate old shape if necessary      
+  if(!n.id) n.id = uid('n');      
+  return n;      
+});      
+links = links || [];      
+      
+/* ---------------- Graph draw + animation ---------------- */      
+function drawGraph(){      
+  ctx.clearRect(0,0,graphCanvas.width,graphCanvas.height);      
+      
+  // gentle physics movement      
+  nodes.forEach(n=>{      
+    n.x += (n.dx || 0);      
+    n.y += (n.dy || 0);      
+    // clamp      
+    if(n.x < 12){ n.x = 12; n.dx *= -1; }      
+    if(n.x > graphCanvas.width - 12){ n.x = graphCanvas.width - 12; n.dx *= -1; }      
+    if(n.y < 12){ n.y = 12; n.dy *= -1; }      
+    if(n.y > graphCanvas.height - 12){ n.y = graphCanvas.height - 12; n.dy *= -1; }      
+  });      
+      
+  // draw links by resolving ids to nodes      
+  ctx.lineWidth = 1.2;      
+  ctx.strokeStyle = 'rgba(123,92,255,0.22)';      
+  links.forEach(l=>{      
+    const a = nodes.find(n=>n.id === l.a);      
+    const b = nodes.find(n=>n.id === l.b);      
+    if(!a || !b) return;      
+    ctx.beginPath();      
+    ctx.moveTo(a.x, a.y);      
+    ctx.lineTo(b.x, b.y);      
+    ctx.stroke();      
+  });      
+      
+  // draw nodes      
+  nodes.forEach(n=>{      
+    ctx.beginPath();      
+    ctx.fillStyle = n.color || '#b8a6ff';      
+    ctx.arc(n.x, n.y, 7, 0, Math.PI*2);      
+    ctx.fill();      
+    // subtle halo for latest node      
+  });      
+      
+  requestAnimationFrame(drawGraph);      
+}      
+      
+/* tooltip hover */      
+graphCanvas.addEventListener('mousemove', (ev)=>{      
+  const rect = graphCanvas.getBoundingClientRect();      
+  const x = ev.clientX - rect.left;      
+  const y = ev.clientY - rect.top;      
+  let found = null;      
+  for(let i = nodes.length - 1; i >= 0; i--){      
+    const n = nodes[i];      
+    const dx = x - n.x;      
+    const dy = y - n.y;      
+    if(Math.sqrt(dx*dx + dy*dy) < 9){ found = n; break; }      
+  }      
+  if(found){      
+    tooltip.style.left = (ev.clientX - rect.left + 12) + 'px';      
+    tooltip.style.top = (ev.clientY - rect.top + 12) + 'px';      
+    tooltip.innerText = found.text.slice(0,180);      
+    tooltip.style.opacity = 1;      
+  } else {      
+    tooltip.style.opacity = 0;      
+  }      
+});      
+      
+/* canvas click: focus message or open detail (optional) */      
+graphCanvas.addEventListener('click', (ev)=>{      
+  const rect = graphCanvas.getBoundingClientRect();      
+  const x = ev.clientX - rect.left;      
+  const y = ev.clientY - rect.top;      
+  for(let i=nodes.length-1;i>=0;i--){      
+    const n = nodes[i];      
+    const dx = x-n.x, dy = y-n.y;      
+    if(Math.sqrt(dx*dx+dy*dy) < 10){      
+      // append a quick AI reaction and show node text      
+      messages.push({who:'ai', text:'I see this memory: "'+n.text.slice(0,120)+'"', ts: Date.now()});      
+      saveMessages();      
+      appendMessage('I see this memory: "'+n.text.slice(0,120)+'"','ai',Date.now());      
+      return;      
+    }      
+  }      
+});      
+      
+/* --------------- Export / clear / save actions --------------- */      
+exportBtn.addEventListener('click', ()=>{      
+  // build transcript from messages      
+  const lines = messages.map(m => {      
+    const who = m.who === 'user' ? 'You' : 'MindChat AI';      
+    return `[${new Date(m.ts).toLocaleString()}] ${who}: ${m.text}`;      
+  }).join('\n\n');      
+  if(!lines) return alert('No messages to export.');      
+  const blob = new Blob([lines], {type: 'text/plain;charset=utf-8'});      
+  const url = URL.createObjectURL(blob);      
+  const a = document.createElement('a');      
+  a.href = url; a.download = 'mindchat_transcript_' + (new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')) + '.txt';      
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);      
+});      
+      
+clearGraphBtn.addEventListener('click', ()=>{      
+  if(!confirm('Clear all memory nodes, links, and saved nodes?')) return;      
+  nodes = []; links = []; saveNodes(); saveLinks();      
+  // do not remove sessions/messages (optionally you can)      
+  drawGraph();      
+  alert('Memory cleared.');      
+});      
+      
+downloadGraphBtn.addEventListener('click', ()=>{      
+  const data = { nodes, links, ts: Date.now() };      
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});      
+  const url = URL.createObjectURL(blob);      
+  const a = document.createElement('a');      
+  a.href = url; a.download = 'mindchat_graph_' + (new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')) + '.json';      
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);      
+});      
+      
+saveNodesBtn.addEventListener('click', ()=>{      
+  saveNodes(); saveLinks();      
+  alert('Nodes & links saved to localStorage ✓');      
+});      
+      
+/* -------------- Messages load/render at start -------------- */      
+function renderMessages(){      
+  chatWindow.innerHTML = '';      
+  if(!messages || messages.length === 0){      
+    // greeting      
+    const welcomeText = 'Hello 👋 I’m MindChat AI, your memory companion. What’s on your mind today?';      
+    messages = [{who:'ai', text: welcomeText, ts: Date.now()}];      
+    saveMessages();      
+  }      
+  messages.forEach(m => appendMessage(m.text, m.who, m.ts));      
+}      
+      
+/* -------------- initial render -------------- */      
+renderSessions();      
+if(!activeSession && sessions.length>0){      
+  setActiveSession(sessions[0].id);      
+}      
+renderMessages();      
+drawGraph();      
+      
+/* keep graph animation alive even if no nodes */      
+requestAnimationFrame(drawGraph);    
 
-  <div class="container">
-    <!-- Chat -->
-    <div class="chat-area" role="main">
-      <div id="chatWindow" class="chat-window" aria-live="polite">
-        <!-- messages -->
-      </div>
+/* ---------------- Step 5: Emotional Intensity Layer ---------------- */
 
-      <div class="input-area">
-        <input id="userInput" placeholder="Type your thought... (Ctrl+Enter to send)" aria-label="Type your thought">
-        <button id="sendBtn">Send</button>
-      </div>
-    </div>
-
-    <!-- Graph area -->
-    <div class="side-graph" aria-label="Memory graph">
-      <h3 style="margin:0;color:var(--accent)">🕸 Memory Graph</h3>
-      <canvas id="graphCanvas" class="graph-canvas" width="640" height="480"></canvas>
-      <div style="display:flex; gap:8px;">
-        <button id="clearGraphBtn" class="clear-btn small">🧹 Clear Memory</button>
-        <button id="saveNodesBtn" class="btn small ghost">Save Nodes</button>
-      </div>
-      <div id="tooltip" class="tooltip" aria-hidden="true"></div>
-    </div>
-  </div>
-</div>
-
-<script>
-/* ----------------------------------------
-   MindChat Step 5 — Dynamic Emotion Graph
-   Adds:
-    - Emotion pulse (glow)
-    - Line animation on new connection
-    - Node fade over time
-    - Real-time emotion label display
------------------------------------------*/
-
-const chatWindow = document.getElementById('chatWindow');
-const userInput = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const typingIndicator = document.getElementById('typingIndicator');
-const exportBtn = document.getElementById('exportBtn');
-
-const graphCanvas = document.getElementById('graphCanvas');
-const ctx = graphCanvas.getContext('2d');
-const tooltip = document.getElementById('tooltip');
-
-const sessionsListEl = document.getElementById('sessionsList');
-const newSessionBtn = document.getElementById('newSessionBtn');
-const saveSessionBtn = document.getElementById('saveSessionBtn');
-const clearGraphBtn = document.getElementById('clearGraphBtn');
-const downloadGraphBtn = document.getElementById('downloadGraphBtn');
-const saveNodesBtn = document.getElementById('saveNodesBtn');
-
-// emotion label
-const emotionLabel = document.createElement("div");
-emotionLabel.style.textAlign = "center";
-emotionLabel.style.fontWeight = "600";
-emotionLabel.style.fontSize = "0.95rem";
-emotionLabel.style.marginTop = "6px";
-emotionLabel.style.opacity = "0.8";
-document.querySelector(".side-graph").appendChild(emotionLabel);
-
-const STORAGE = {
-  nodes: 'mindchat_nodes_v5',
-  links: 'mindchat_links_v5',
-  sessions: 'mindchat_sessions_v5',
-  activeSessionId: 'mindchat_active_session_v5',
-  messages: 'mindchat_messages_v5'
-};
-
-// memory
-let nodes = JSON.parse(localStorage.getItem(STORAGE.nodes) || '[]');
-let links = JSON.parse(localStorage.getItem(STORAGE.links) || '[]');
-let sessions = JSON.parse(localStorage.getItem(STORAGE.sessions) || '[]');
-let messages = JSON.parse(localStorage.getItem(STORAGE.messages) || '[]');
-let activeSession = localStorage.getItem(STORAGE.activeSessionId) || null;
-
-/* ---------- helper ---------- */
-function uid(p='id'){ return p+'_'+Math.random().toString(36).slice(2,9); }
-function saveNodes(){ localStorage.setItem(STORAGE.nodes, JSON.stringify(nodes)); }
-function saveLinks(){ localStorage.setItem(STORAGE.links, JSON.stringify(links)); }
-function saveMessages(){ localStorage.setItem(STORAGE.messages, JSON.stringify(messages)); }
-
-/* ---------- sentiment ---------- */
-function analyzeEmotion(text){
-  const low = text.toLowerCase();
-  if(/love|happy|excited|joy|great/.test(low)) return {label:"Happy", color:"#ffd166"};
-  if(/sad|upset|tired|cry|lonely/.test(low)) return {label:"Sad", color:"#118ab2"};
-  if(/angry|mad|hate|furious/.test(low)) return {label:"Angry", color:"#ef476f"};
-  if(/calm|ok|fine|peace|normal/.test(low)) return {label:"Calm", color:"#06d6a0"};
-  return {label:"Reflective", color:"#8338ec"};
+// Basic sentiment estimation (light heuristic)
+function analyzeEmotion(text) {
+  const positive = ['love','happy','joy','beautiful','great','like','peace','calm','hope','smile'];
+  const negative = ['sad','hate','angry','pain','cry','fear','bad','hurt','lonely','tired'];
+  let score = 0;
+  text.toLowerCase().split(/\s+/).forEach(w=>{
+    if (positive.includes(w)) score += 1;
+    if (negative.includes(w)) score -= 1;
+  });
+  return Math.max(-3, Math.min(3, score)); // clamp -3 to +3
 }
 
-/* ---------- chat send ---------- */
-async function sendMessage(){
-  const text = userInput.value.trim();
-  if(!text) return;
-  const ts = Date.now();
-  messages.push({who:'user', text, ts});
-  saveMessages();
-  appendMessage(text,'user',ts);
-  addNodeToGraph(text,'user',ts);
-  userInput.value='';
-  setTyping(true);
-  const delay = 600+Math.floor(Math.random()*600);
-  setTimeout(()=>{
-    const reply = generateAIReply(text);
-    const ts2 = Date.now();
-    messages.push({who:'ai', text:reply, ts:ts2});
-    saveMessages();
-    appendMessage(reply,'ai',ts2);
-    addNodeToGraph(reply,'ai',ts2);
-    setTyping(false);
-  }, delay);
-}
-
-/* ---------- UI message append ---------- */
-function appendMessage(text, who, ts){
-  const el=document.createElement('div');
-  el.className='message '+(who==='user'?'user':'ai');
-  el.innerHTML=`<div>${escapeHtml(text)}</div>
-                <div class="meta">${who==='user'?'You':'MindChat AI'} • ${new Date(ts).toLocaleTimeString()}</div>`;
-  chatWindow.appendChild(el);
-  chatWindow.scrollTop=chatWindow.scrollHeight;
-}
-function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-/* ---------- graph nodes ---------- */
-function addNodeToGraph(text,type,ts){
+// Modify addNodeToGraph to include emotion strength
+const _origAddNodeToGraph = addNodeToGraph;
+addNodeToGraph = function(text, type, ts) {
   const emotion = analyzeEmotion(text);
+  const KW = extractKeywords(text);
   const x = 30 + Math.random()*(graphCanvas.width-60);
   const y = 30 + Math.random()*(graphCanvas.height-60);
-  const node = {
-    id: uid('n'),
-    text, ts, x, y,
-    color: emotion.color,
-    emotion: emotion.label,
-    glow: 1,
-    fade: 1.0,
-    dx:(Math.random()-.5)*1.2,
-    dy:(Math.random()-.5)*1.2
-  };
-  const last = nodes[nodes.length-1];
-  if(last) links.push({a:last.id,b:node.id, pulse:1});
-  nodes.push(node);
-  emotionLabel.textContent = "Mood: " + emotion.label;
-  saveNodes(); saveLinks();
-}
+  const baseColor = type === 'user' ? '#7b5cff' : '#b8a6ff';
 
-/* ---------- draw graph ---------- */
-function drawGraph(){
+  // hue shift by emotion
+  const hueShift = 240 + (emotion * 20); // -ve = blue, +ve = warm
+  const nodeColor = `hsl(${hueShift}, 100%, 70%)`;
+
+  const node = { id: uid('n'), text, ts, x, y, color: nodeColor, dx:(Math.random()-.5)*1.2, dy:(Math.random()-.5)*1.2, keywords: KW, emotion };
+
+  // keyword linking
+  const matches = nodes.filter(n => n.keywords.some(k => KW.includes(k)));
+  const toLink = matches.slice(-3);
+  nodes.push(node);
+  toLink.forEach(m => links.push({ a: m.id, b: node.id }));
+  if (toLink.length === 0 && nodes.length > 1) {
+    links.push({ a: nodes[nodes.length-2].id, b: node.id });
+  }
+  saveNodes(); saveLinks();
+  drawGraph();
+};
+
+// update drawGraph to reflect emotional pulse color
+const _origDrawGraph = drawGraph;
+drawGraph = function() {
   ctx.clearRect(0,0,graphCanvas.width,graphCanvas.height);
 
-  // update link pulse
-  links.forEach(l=>{
-    l.pulse = (l.pulse||0)*0.95;
-    const a = nodes.find(n=>n.id===l.a);
-    const b = nodes.find(n=>n.id===l.b);
-    if(!a||!b) return;
-    const grad = ctx.createLinearGradient(a.x,a.y,b.x,b.y);
-    grad.addColorStop(0,'rgba(123,92,255,'+(0.2+l.pulse*0.6)+')');
-    grad.addColorStop(1,'rgba(123,92,255,0.1)');
-    ctx.strokeStyle=grad;
-    ctx.lineWidth=1.4;
-    ctx.beginPath();
-    ctx.moveTo(a.x,a.y);
-    ctx.lineTo(b.x,b.y);
-    ctx.stroke();
-  });
-
+  // physics
   nodes.forEach(n=>{
-    // movement
-    n.x+=n.dx; n.y+=n.dy;
+    n.x += (n.dx||0);
+    n.y += (n.dy||0);
     if(n.x<12||n.x>graphCanvas.width-12) n.dx*=-1;
     if(n.y<12||n.y>graphCanvas.height-12) n.dy*=-1;
-    // fade older
-    const age = (Date.now()-n.ts)/60000;
-    n.fade = Math.max(0.2, 1 - age*0.02);
-    const glow = n.glow*0.8;
-    ctx.beginPath();
-    ctx.fillStyle=n.color;
-    ctx.globalAlpha = n.fade;
-    ctx.shadowColor=n.color;
-    ctx.shadowBlur=12*glow;
-    ctx.arc(n.x,n.y,7,0,Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur=0;
-    ctx.globalAlpha=1;
-    n.glow*=0.95;
   });
+
+  // links
+  ctx.lineWidth=1.2;
+  ctx.strokeStyle='rgba(123,92,255,0.22)';
+  links.forEach(l=>{
+    const a=nodes.find(n=>n.id===l.a), b=nodes.find(n=>n.id===l.b);
+    if(!a||!b) return;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  });
+
+  // emotional nodes
+  nodes.forEach(n=>{
+    ctx.beginPath();
+    const intensity = Math.abs(n.emotion||0);
+    const size = 6 + intensity * 2; // bigger = stronger emotion
+    ctx.fillStyle = n.color || '#b8a6ff';
+    ctx.arc(n.x, n.y, size, 0, Math.PI*2);
+    ctx.fill();
+
+    // soft glow for strong emotions
+    if(intensity>1){
+      const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,size*3);
+      grd.addColorStop(0, n.color);
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(n.x,n.y,size*3,0,Math.PI*2); ctx.fill();
+    }
+  });
+
   requestAnimationFrame(drawGraph);
-}
+};
 
-/* ---------- start ---------- */
-renderMessages();
-drawGraph();
-sendBtn.onclick=sendMessage;
-userInput.addEventListener('keydown',(e)=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){sendMessage();}});
-
-function generateAIReply(t){
-  const arr=[
-    "That's an interesting thought 🌱",
-    "Hmm, your feeling connects with a past memory 💫",
-    "I sense calm reflection here 🕊",
-    "Let's store this safely in memory 🧠"
-  ];
-  return arr[Math.floor(Math.random()*arr.length)];
-}
-function setTyping(on){typingIndicator.textContent=on?'MindChat is thinking…':'';}
-function renderMessages(){
-  chatWindow.innerHTML='';
-  if(!messages.length){
-    const greet='Hello 👋 I’m MindChat AI, your evolving memory companion.';
-    messages=[{who:'ai',text:greet,ts:Date.now()}];
-    saveMessages();
-  }
-  messages.forEach(m=>appendMessage(m.text,m.who,m.ts));
-}
-</script>
-</body>
-</html>
+console.log("✅ Step 5: Emotional visualization active");  
+      
+</script>      </body>      
+</html>      
+ 
