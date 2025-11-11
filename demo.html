@@ -267,32 +267,93 @@ body {
       background: var(--accent);
       color: #fff;
     }
-    @media(max-width:767px){
-      .sidebar{
-        display: none;
-      }
-      .side-graph{
-        display: none;
-      }
-    }
-    @media(max-width:1000px) {
-      .side-graph {
-        display: none;
-      }
+    .sidebar,
+.side-graph {
+  transition: transform 0.3s ease-in-out;
+}
 
-      .sidebar {
-        width: 200px;
-      }
+/* hidden by default on mobile */
 
-      .session-item {
-        font-size: 0.95rem;
-      }
-    }
 
-    .small-muted {
-      font-size: 12px;
-      opacity: 0.7;
-    }
+    /* Mobile-first adjustments */
+@media (max-width: 767px) {
+  /* Hide sidebar and graph completely */
+  .sidebar {
+    display: none;
+  }
+    .header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .side-graph {
+    display: none;
+  }
+   .header h1 {
+    font-size: 1.1rem;
+    text-align: center;
+    flex: 1;
+    margin: 0 10px;
+  }
+  .chat-window{
+  padding-left:0;
+  padding-right:0;
+  gap:20px;
+  }
+  /* The two control rows stack horizontally */
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Make main area full width */
+  .main {
+    margin-left: 0;
+    width: 100%;
+    padding: 12px;
+  }
+
+  /* Chat bubbles more compact */
+  .message {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    padding: 10px 14px;
+    border-radius: 12px;
+  }
+
+  /* Input area fits screen width */
+  .input-area {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Button smaller but clear */
+  .send-btn {
+    font-size: 0.9rem;
+    padding: 8px 14px;
+    border-radius: 10px;
+  }
+
+  /* Small muted text */
+  .small-muted {
+    font-size: 11px;
+    opacity: 0.65;
+  }
+}
+
   </style>
 </head>
 
@@ -313,13 +374,17 @@ body {
     <div class="small-muted">Memory nodes & links persist locally. Clear will remove them.</div>
   </div> <!-- MAIN -->
   <div class="main">
-    <div class="header">
-      <h1>MindChat AI — Memory Companion</h1>
-      <div class="controls-row">
-        <div id="typingIndicator" class="small-muted" style="min-width:120px"></div>
-        <button id="downloadGraphBtn" class="btn ghost small">Save Graph JSON</button>
-      </div>
-    </div>
+ <div class="header">
+  <div class="controls-row">
+    <button id="toggleSidebar">☰</button>
+    <h1>MindChat AI — Memory Companion</h1>
+  </div>
+  <div class="controls-row">
+    <button id="toggleGraph">🕸</button>
+    <div id="typingIndicator" class="small-muted"></div>
+  </div>
+</div>
+
     <div class="container">
       <!-- Chat -->
       <div class="chat-area" role="main">
@@ -404,6 +469,16 @@ body {
       renderSessions();
       renderMessages();
     }
+
+    // --- Mobile toggle buttons ---
+const sidebar = document.querySelector('.sidebar');
+const graph = document.querySelector('.side-graph');
+document.getElementById('toggleSidebar').addEventListener('click', () => {
+  sidebar.classList.toggle('active');
+});
+document.getElementById('toggleGraph').addEventListener('click', () => {
+  graph.classList.toggle('active');
+});
 
     /* ------------- Sessions UI ------------- */
     function renderSessions() {
