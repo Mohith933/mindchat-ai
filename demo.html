@@ -643,21 +643,50 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    /* -------------- Typing + AI reply -------------- */
-    let typingTimeout = null;
-    function setTyping(on, text = '') {
-      typingIndicator.textContent = on ? 'MindChat is typing…' : '';
-    }
-    function generateAIReply(userText) {
-      // simple reply templates but improved linking hint      
-      const base = [
-        "That sounds meaningful — why do you feel that way?",
-        "I'm linking this with your last thought in memory 🧠",
-        "Interesting — this connects to something you mentioned earlier.",
-        "I hear you. Let's keep this memory safe."
-      ];
-      return base[Math.floor(Math.random() * base.length)];
-    }
+   function detectMood(text) {
+  text = text.toLowerCase();
+  if (text.includes("sad") || text.includes("tired") || text.includes("lonely")) return "sad";
+  if (text.includes("happy") || text.includes("excited") || text.includes("great")) return "happy";
+  if (text.includes("angry") || text.includes("mad")) return "angry";
+  if (text.includes("love") || text.includes("like") || text.includes("crush")) return "love";
+  return "neutral";
+}
+function generateAIReply(userText) {
+  const mood = detectMood(userText);
+
+  const replies = {
+    happy: [
+      "I love that energy! Tell me more about what made you smile 😄",
+      "That’s wonderful — it’s nice to hear your mood is bright!",
+      "Good vibes! What are you most thankful for today?"
+    ],
+    sad: [
+      "I'm here with you. Want to talk about what made you feel this way?",
+      "It’s okay to feel down sometimes — what could help you right now?",
+      "That sounds heavy, but you’re not alone 🌙"
+    ],
+    angry: [
+      "I sense frustration — want to unpack what triggered it?",
+      "It’s okay to feel angry, expressing it helps you heal.",
+      "Let’s slow down and take a breath together."
+    ],
+    love: [
+      "Aww, that’s sweet — love always makes the world brighter 💞",
+      "Who’s on your mind right now?",
+      "That’s lovely. What do you cherish most about that person?"
+    ],
+    neutral: [
+      "I’m listening carefully — tell me more.",
+      "That’s interesting. How do you feel about it?",
+      "I’m linking this with your last thought in memory 🧠"
+    ]
+  };
+  const group = replies[mood];
+  return group[Math.floor(Math.random() * group.length)];
+}
+function setTyping(on) {
+  typingIndicator.textContent = on ? "MindChat is typing…" : "";
+}
 
     /* ------------- Message send flow ------------- */
     async function sendMessage() {
