@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MindChat AI — Memory Companion (Step 4)</title>
+  <title>MindChat AI — Memory Companion (Step 5)</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -11,6 +11,7 @@
       --text: #111827;
       --accent: #7b5cff;
       --muted: #eef0fb;
+      --error: #ff5c77; /* Added for visual clarity */
     }
 
     @media(prefers-color-scheme:dark) {
@@ -19,6 +20,7 @@
         --text: #eef2ff;
         --accent: #a58dff;
         --muted: #121217;
+        --error: #ff8c99; /* Added for visual clarity */
       }
     }
 
@@ -32,8 +34,8 @@ body {
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
-  overflow-y: auto; /* ✅ allow page scroll */
-  display: block;   /* not flex, since we want normal document flow */
+  overflow-y: auto; 
+  display: block;   
 }
 
    .sidebar {
@@ -48,6 +50,7 @@ body {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  transition: transform 0.3s ease-in-out; /* Added for mobile toggle */
 }
 
     .sidebar h2 {
@@ -104,8 +107,8 @@ body {
     }
 
     .main {
-  margin-left: 260px;  /* space for sidebar */
-  margin-right: 340px; /* space for graph */
+  margin-left: 260px;  
+  margin-right: 340px; 
   border-left: 1px solid rgba(0, 0, 0, 0.04);
   border-right: 1px solid rgba(0, 0, 0, 0.04);
   width: calc(100% - 600px);
@@ -122,6 +125,7 @@ body {
       color: var(--text);
       position: sticky;
       top:0;
+      z-index: 5; /* Ensure header stays on top */
     }
 
     .header h1 {
@@ -134,7 +138,7 @@ body {
   flex: 1;
   gap: 12px;
   padding: 16px;
-  overflow: visible; /* ✅ allow page scroll */
+  overflow: visible; 
   height: auto;
 }
 
@@ -144,7 +148,7 @@ body {
   display: flex;
   flex-direction: column;
   background: transparent;
-  height: calc(100vh - 120px); /* keep it inside page */
+  height: calc(100vh - 120px); 
 }
 
 .chat-window {
@@ -154,6 +158,7 @@ body {
   flex-direction: column;
   gap: 10px;
   scroll-behavior: smooth;
+  overflow-y: auto; /* Ensure chat window scrolls */
 }
 
 .input-area {
@@ -164,7 +169,7 @@ body {
   border-top: 1px solid rgba(0, 0, 0, 0.03);
   background: var(--bg);
   position: sticky;
-  bottom: 0; /* ✅ stay visible when scroll */
+  bottom: 0; 
 }
 
 
@@ -185,7 +190,7 @@ body {
 
     .message.ai {
       align-self: flex-start;
-      background: #000;
+      background: var(--muted);
       border: 1px solid rgba(0, 0, 0, 0.06);
     }
 
@@ -201,6 +206,8 @@ body {
       border-radius: 10px;
       border: 1px solid rgba(0, 0, 0, 0.06);
       outline: none;
+      background: var(--bg); /* Ensure input background respects theme */
+      color: var(--text);
     }
 
     .input-area button {
@@ -226,6 +233,7 @@ body {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  transition: transform 0.3s ease-in-out; /* Added for mobile toggle */
     }
     .graph-canvas {
       background: #fff;
@@ -246,6 +254,7 @@ body {
       pointer-events: none;
       opacity: 0;
       transition: opacity .12s;
+      z-index: 100;
     }
 
     .controls-row {
@@ -255,33 +264,40 @@ body {
     }
 
     .clear-btn {
-      background: #fff;
-      color: var(--accent);
-      border: 1px solid var(--accent);
+      background: var(--error);
+      color: #fff;
+      border: 1px solid var(--error);
       padding: 8px 10px;
       border-radius: 8px;
       cursor: pointer;
     }
+    
+    .clear-btn.small {
+        font-weight: 600;
+    }
 
     .clear-btn:hover {
-      background: var(--accent);
-      color: #fff;
+      opacity: 0.9;
     }
-    .sidebar,
-.side-graph {
-  transition: transform 0.3s ease-in-out;
-}
-
-/* hidden by default on mobile */
 
 
     /* Mobile-first adjustments */
 @media (max-width: 767px) {
-  /* Hide sidebar and graph completely */
+  
   .sidebar {
-    display: none;
+    position: fixed;
+    width: 80%;
+    transform: translateX(-100%); /* Hidden by default */
+    z-index: 20;
+    display: flex; /* Override display:none */
   }
+  
+  .sidebar.active {
+    transform: translateX(0); /* Shown when active */
+  }
+
     .header {
+    height: auto;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -294,42 +310,46 @@ body {
     z-index: 10;
   }
   .side-graph {
-    display: none;
+    position: fixed;
+    width: 80%;
+    left: auto;
+    right: 0;
+    transform: translateX(100%); /* Hidden by default */
+    z-index: 20;
+    display: flex; /* Override display:none */
   }
-   .header h1 {
+  
+  .side-graph.active {
+    transform: translateX(0); /* Shown when active */
+  }
+   
+  .header h1 {
     font-size: 1.1rem;
     text-align: center;
     flex: 1;
     margin: 0 10px;
   }
   .chat-window{
-  padding-left:0;
-  padding-right:0;
-  gap:20px;
+  padding-left:10px;
+  padding-right:10px;
+  gap:16px;
   }
-  /* The two control rows stack horizontally */
-  .controls-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* Make main area full width */
+  
   .main {
     margin-left: 0;
+    margin-right: 0;
     width: 100%;
-    padding: 12px;
+    padding: 0; /* Let chat-window handle padding */
   }
 
-  /* Chat bubbles more compact */
   .message {
+    max-width: 90%;
     font-size: 0.95rem;
     line-height: 1.4;
     padding: 10px 14px;
     border-radius: 12px;
   }
 
-  /* Input area fits screen width */
   .input-area {
     position: fixed;
     bottom: 0;
@@ -338,16 +358,15 @@ body {
     padding: 10px;
     background: var(--bg);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
   }
 
-  /* Button smaller but clear */
   .send-btn {
     font-size: 0.9rem;
     padding: 8px 14px;
     border-radius: 10px;
   }
 
-  /* Small muted text */
   .small-muted {
     font-size: 11px;
     opacity: 0.65;
@@ -357,7 +376,7 @@ body {
   </style>
 </head>
 
-<body> <!-- SIDEBAR: sessions & quick actions -->
+<body> 
   <div class="sidebar" aria-label="Sessions and memory controls">
     <h2>🧠 Sessions</h2>
     <div class="controls">
@@ -365,46 +384,43 @@ body {
       <button id="saveSessionBtn" class="btn small">Save</button>
     </div>
     <div class="sessions" id="sessionsList" aria-live="polite">
-      <!-- session items injected -->
-    </div>
+      </div>
     <div style="display:flex; gap:8px; align-items:center;">
-      <button id="exportBtn" class="btn small">Export Chat</button>
-      <button id="clearMemoryBtn" class="clear-btn small">🧹 Clear Memory</button>
+      <button id="exportBtn" class="btn small ghost">Export Chat (.txt)</button>
+      <button id="clearMemoryBtn" class="clear-btn small">🧹 Clear ALL</button>
     </div>
     <div class="small-muted">Memory nodes & links persist locally. Clear will remove them.</div>
-  </div> <!-- MAIN -->
+  </div> 
+
   <div class="main">
- <div class="header">
-  <div class="controls-row">
-    <button id="toggleSidebar">☰</button>
-    <h1>MindChat AI — Memory Companion</h1>
-  </div>
-  <div class="controls-row">
-    <button id="toggleGraph">🕸</button>
-    <div id="typingIndicator" class="small-muted"></div>
-  </div>
-</div>
+    <div class="header">
+      <div class="controls-row">
+        <button id="toggleSidebar">☰</button>
+        <h1>MindChat AI — Memory Companion</h1>
+      </div>
+      <div class="controls-row">
+        <button id="toggleGraph">🕸</button>
+        <div id="typingIndicator" class="small-muted"></div>
+      </div>
+    </div>
 
     <div class="container">
-      <!-- Chat -->
       <div class="chat-area" role="main">
         <div id="chatWindow" class="chat-window" aria-live="polite">
-          <!-- messages -->
-        </div>
+          </div>
         <div class="input-area">
           <input id="userInput" placeholder="Type your thought... (Ctrl+Enter to send)" aria-label="Type your thought">
-          <button id="sendBtn">Send</button>
+          <button id="sendBtn" class="send-btn">Send</button>
         </div>
       </div>
 
-      <!-- Graph area -->
       <div class="side-graph" aria-label="Memory graph">
-        <h3 style="margin:0;color:var(--accent)">🕸 Memory Graph</h3>
+        <h3 style="margin:0;color:var(--accent)">🕸 Memory Graph (Emotional Layer)</h3>
         <canvas id="graphCanvas" class="graph-canvas" width="640" height="480"></canvas>
         <div style="display:flex; gap:8px;">
-          <button id="clearGraphBtn" class="clear-btn small">🧹 Clear Memory</button>
+          <button id="clearGraphBtn" class="clear-btn small">🧹 Clear Graph</button>
           <button id="saveNodesBtn" class="btn small ghost">Save Nodes</button>
-        </div>
+          <button id="downloadGraphBtn" class="btn small ghost">Export JSON</button> </div>
         <div id="tooltip" class="tooltip" aria-hidden="true"></div>
       </div>
 
@@ -412,16 +428,8 @@ body {
   </div>
   <script>
     /* ------------------------------      
-      MindChat Step 4 — full JS      
-      Features:      
-       - save/load sessions in sidebar      
-       - timestamps on messages      
-       - typing indicator      
-       - export chat transcript (.txt)      
-       - persistent memory graph (nodes/links) with tooltip      
-       - improved linking (keyword matching)      
-       - clear memory + export JSON      
-    -------------------------------*/
+      MindChat Step 5 — Final JS (Corrected)      
+      -------------------------------*/
 
     const chatWindow = document.getElementById('chatWindow');
     const userInput = document.getElementById('userInput');
@@ -437,26 +445,30 @@ body {
     const newSessionBtn = document.getElementById('newSessionBtn');
     const saveSessionBtn = document.getElementById('saveSessionBtn');
     const clearGraphBtn = document.getElementById('clearGraphBtn');
-    const downloadGraphBtn = document.getElementById('downloadGraphBtn');
+    const downloadGraphBtn = document.getElementById('downloadGraphBtn'); // Defined button element
     const saveNodesBtn = document.getElementById('saveNodesBtn');
-
+    
+    // --- Global State ---
+    let typingTimeout = null; // ✅ FIXED: Declared typingTimeout
+    let lastMood = null;
+    let lastReply = null;
+    
     const STORAGE = {
       nodes: 'mindchat_nodes_v4',
       links: 'mindchat_links_v4',
       sessions: 'mindchat_sessions_v4',
       activeSessionId: 'mindchat_active_session_v4',
-      messages: 'mindchat_messages_v4' // active messages for current session      
+      messages: 'mindchat_messages_v4'      
     };
 
     // in-memory data      
     let nodes = JSON.parse(localStorage.getItem(STORAGE.nodes) || '[]');
     let links = JSON.parse(localStorage.getItem(STORAGE.links) || '[]');
-    let sessions = JSON.parse(localStorage.getItem(STORAGE.sessions) || '[]'); // array of {id,name,ts}      
-    let messages = JSON.parse(localStorage.getItem(STORAGE.messages) || '[]'); // current session messages array      
+    let sessions = JSON.parse(localStorage.getItem(STORAGE.sessions) || '[]'); 
+    let messages = JSON.parse(localStorage.getItem(STORAGE.messages) || '[]'); 
     let activeSession = localStorage.getItem(STORAGE.activeSessionId) || null;
 
     /* ---------------- Helpers ---------------- */
-    function nowISO() { return new Date().toISOString(); }
     function nowPretty() { return new Date().toLocaleString(); }
     function uid(prefix = 'id') { return prefix + '_' + Math.random().toString(36).slice(2, 9); }
     function saveNodes() { localStorage.setItem(STORAGE.nodes, JSON.stringify(nodes)); }
@@ -471,14 +483,16 @@ body {
     }
 
     // --- Mobile toggle buttons ---
-const sidebar = document.querySelector('.sidebar');
-const graph = document.querySelector('.side-graph');
-document.getElementById('toggleSidebar').addEventListener('click', () => {
-  sidebar.classList.toggle('active');
-});
-document.getElementById('toggleGraph').addEventListener('click', () => {
-  graph.classList.toggle('active');
-});
+    const sidebar = document.querySelector('.sidebar');
+    const graph = document.querySelector('.side-graph');
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+      sidebar.classList.toggle('active');
+      graph.classList.remove('active'); // Close graph when opening sidebar
+    });
+    document.getElementById('toggleGraph').addEventListener('click', () => {
+      graph.classList.toggle('active');
+      sidebar.classList.remove('active'); // Close sidebar when opening graph
+    });
 
     /* ------------- Sessions UI ------------- */
     function renderSessions() {
@@ -508,14 +522,12 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
     newSessionBtn.addEventListener('click', () => {
       const name = prompt('Session name (optional)') || 'Session ' + new Date().toLocaleString();
       const id = uid('sess');
-      const s = { id, name, ts: Date.now() };
+      const s = { id, name, ts: Date.now(), messages: [] }; // initialize with empty messages
       sessions.unshift(s);
       saveSessions();
-      // reset messages for new session      
       messages = [];
       saveMessages();
       setActiveSession(id);
-      // also clear chat UI      
       chatWindow.innerHTML = '';
     });
 
@@ -524,13 +536,6 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
       if (!activeSession) {
         alert('Create or load a session first (press New).');
         return;
-      }
-      const sidx = sessions.findIndex(x => x.id === activeSession);
-      if (sidx === -1) {
-        alert('Active session not found — creating new one.');
-        const id = uid('sess');
-        sessions.unshift({ id, name: 'Saved ' + nowPretty(), ts: Date.now() });
-        setActiveSession(id);
       }
       // attach messages snapshot to session object for quick restore      
       sessions = sessions.map(s => {
@@ -545,15 +550,13 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
     });
 
     // Listen session actions (load/delete)      
-    /* ---------- FIXED: Sessions Load/Delete/Scroll + Clear All ---------- */
-
-    // handle load / delete buttons inside session list
     sessionsListEl.addEventListener("click", (ev) => {
       const loadId = ev.target.dataset.load;
       const delId = ev.target.dataset.del;
 
-          if (!loadId && !delId && target.closest('.session-item')) {
-        const sId = target.closest('.session-item').querySelector('[data-load]')?.dataset.load;
+      // ✅ FIXED: Session item click fallback (not on load/del buttons)
+      if (!loadId && !delId && ev.target.closest('.session-item')) { 
+        const sId = ev.target.closest('.session-item').querySelector('[data-load]')?.dataset.load;
         if (sId) {
             const s = sessions.find(x => x.id === sId);
             if (!s) return;
@@ -572,7 +575,7 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
         messages = s.messages ? s.messages.slice() : [];
         saveMessages();
         setActiveSession(loadId);
-        renderMessages(); // ensure chat re-renders
+        renderMessages(); 
         setTimeout(() => chatWindow.scrollTop = chatWindow.scrollHeight, 50);
         return;
       }
@@ -594,26 +597,12 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
       }
     });
 
-    // ✅ make chat always auto-scroll after messages append
-    const _oldAppendMessage = appendMessage;
-    appendMessage = function (text, who, ts) {
-      _oldAppendMessage(text, who, ts);
-      // force scroll to bottom
-      requestAnimationFrame(() => {
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-      });
-    };
-
     // ✅ clear ALL memory from sidebar button
     document.getElementById("clearMemoryBtn").addEventListener("click", () => {
       if (!confirm("⚠️ Clear ALL sessions, messages, nodes, and links?")) return;
       // wipe everything
-      localStorage.removeItem(STORAGE.nodes);
-      localStorage.removeItem(STORAGE.links);
-      localStorage.removeItem(STORAGE.sessions);
-      localStorage.removeItem(STORAGE.messages);
-      localStorage.removeItem(STORAGE.activeSessionId);
-
+      localStorage.clear(); // Simpler way to clear all MindChat storage
+      
       // reset runtime data
       nodes = [];
       links = [];
@@ -624,7 +613,7 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
       // refresh UI
       chatWindow.innerHTML = "";
       renderSessions();
-      drawGraph();
+      drawGraph(); // Will continue animation but with empty data
       alert("🧹 All MindChat memory cleared!");
     });
 
@@ -635,7 +624,10 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
       el.className = 'message ' + (who === 'user' ? 'user' : 'ai');
       el.innerHTML = `<div>${escapeHtml(text)}</div><div class="meta">${who === 'user' ? 'You' : 'MindChat AI'} • ${new Date(ts).toLocaleTimeString()}</div>`;
       chatWindow.appendChild(el);
-      chatWindow.scrollTop = chatWindow.scrollHeight;
+      // force scroll to bottom
+      requestAnimationFrame(() => {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      });
     }
 
     // Safe text -> HTML      
@@ -645,25 +637,19 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
 
    function detectMood(text) {
   text = text.toLowerCase();
-
   if (text.includes("sad") || text.includes("tired") || text.includes("lonely") || text.includes("depressed"))
     return "sad";
   if (text.includes("happy") || text.includes("excited") || text.includes("great") || text.includes("joy"))
     return "happy";
-  if (text.includes("angry") || text.includes("mad") || text.includes("annoyed"))
+  if (text.includes("angry") || text.includes("mad") || text.includes("annoyed") || text.includes("frustrated"))
     return "angry";
-  if (text.includes("love") || text.includes("like") || text.includes("crush") || text.includes("heart"))
+  if (text.includes("love") || text.includes("like") || text.includes("crush") || text.includes("heart") || text.includes("cherish"))
     return "love";
   return "neutral";
 }
 
-// Memory to avoid repeating last mood or same message
-let lastMood = null;
-let lastReply = null;
-
 function generateAIReply(userText) {
   const mood = detectMood(userText);
-
   const replies = {
     happy: [
       "I love that energy! Tell me more about what made you smile 😄",
@@ -671,14 +657,14 @@ function generateAIReply(userText) {
       "Good vibes! What are you most thankful for today?"
     ],
     sad: [
-      "I'm here with you. Want to talk about what made you feel this way?",
+      "I'm here with you. Want to talk about what made you feel this way? 🫂",
       "It’s okay to feel down sometimes — what could help you right now?",
       "That sounds heavy, but you’re not alone 🌙"
     ],
     angry: [
       "I sense frustration — want to unpack what triggered it?",
       "It’s okay to feel angry, expressing it helps you heal.",
-      "Let’s slow down and take a breath together."
+      "Let’s slow down and take a breath together. 🧘"
     ],
     love: [
       "Aww, that’s sweet — love always makes the world brighter 💞",
@@ -702,14 +688,7 @@ function generateAIReply(userText) {
 
   lastReply = reply;
   lastMood = mood;
-
-  // Add some natural personalization
-  const randomHint = [
-    "✨", "🌸", "💫", "☁️", "🌿", "🌙"
-  ];
-  const hint = randomHint[Math.floor(Math.random() * randomHint.length)];
-
-  return `${reply} ${hint}`;
+  return reply;
 }
 
 function setTyping(on) {
@@ -744,61 +723,82 @@ async function sendMessage() {
     setTyping(false);
   }, delay);
 }
-    /* wire send button */
-    sendBtn.addEventListener('click', sendMessage);
 
-    /* ---------------- Graph logic (improved linking) ---------------- */
+sendBtn.addEventListener('click', sendMessage);
+userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+        sendMessage();
+    }
+});
+
+
+    /* ---------------- Graph logic (Emotional Layer) ---------------- */
+    
+    // Basic sentiment estimation (light heuristic)
+    function analyzeEmotion(text) {
+      const positive = ['love', 'happy', 'joy', 'beautiful', 'great', 'like', 'peace', 'calm', 'hope', 'smile', 'excited', 'wonderful'];
+      const negative = ['sad', 'hate', 'angry', 'pain', 'cry', 'fear', 'bad', 'hurt', 'lonely', 'tired', 'mad', 'annoyed', 'frustrated'];
+      let score = 0;
+      text.toLowerCase().split(/\s+/).forEach(w => {
+        if (positive.includes(w)) score += 1;
+        if (negative.includes(w)) score -= 1;
+      });
+      return Math.max(-3, Math.min(3, score)); // clamp -3 to +3
+    }
+    
+    const STOP = new Set(['the', 'and', 'a', 'i', 'to', 'of', 'in', 'on', 'for', 'is', 'it', 'that', 'this', 'with', 'my', 'you', 'me', 'be', 'im', 'am']);
+    function extractKeywords(text) {
+      return text.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !STOP.has(w))
+        .slice(0, 6);
+    }
+    
     function addNodeToGraph(text, type, ts) {
+      const emotion = analyzeEmotion(text);
       const KW = extractKeywords(text);
       // place node near center jitter      
       const x = 30 + Math.random() * (graphCanvas.width - 60);
       const y = 30 + Math.random() * (graphCanvas.height - 60);
-      const color = type === 'user' ? '#7b5cff' : '#b8a6ff';
-      const node = { id: uid('n'), text, ts, x, y, color, dx: (Math.random() - .5) * 1.2, dy: (Math.random() - .5) * 1.2, keywords: KW };
+      
+      // hue shift by emotion: 240 (blue/neutral) +/- (emotion * 20)
+      const hueShift = 240 + (emotion * 20); 
+      const nodeColor = `hsl(${hueShift}, 85%, 55%)`; // reduced saturation/lightness for dark theme contrast
+      
+      const node = { id: uid('n'), text, ts, x, y, color: nodeColor, dx: (Math.random() - .5) * 1.2, dy: (Math.random() - .5) * 1.2, keywords: KW, emotion };
+
       // link heuristics: link to recent nodes with shared keywords (max 3)      
       const matches = nodes.filter(n => n.keywords.some(k => KW.includes(k)));
       const toLink = matches.slice(-3);
       nodes.push(node);
       toLink.forEach(m => links.push({ a: m.id, b: node.id }));
+      
       // always link to last node if no keyword matches (continuity)      
       if (toLink.length === 0 && nodes.length > 1) {
         links.push({ a: nodes[nodes.length - 2].id, b: node.id });
       }
       saveNodes(); saveLinks();
-      drawGraph();
+      // Don't call drawGraph here, let the animation frame loop handle it
     }
-
-    /* keyword extraction: simple split, remove stopwords, return top short words */
-    const STOP = new Set(['the', 'and', 'a', 'I', 'to', 'of', 'in', 'on', 'for', 'is', 'it', 'that', 'this', 'with', 'my', 'you', 'me', 'be']);
-    function extractKeywords(text) {
-      return text.toLowerCase()
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .split(/\s+/)
-        .filter(w => w && !STOP.has(w))
-        .slice(0, 6);
-    }
-
-    /* ----- persistent nodes/links load on start (map id->node) ----- */
-    nodes = nodes.map((n) => {
-      // migrate old shape if necessary      
-      if (!n.id) n.id = uid('n');
-      return n;
-    });
-    links = links || [];
 
     /* ---------------- Graph draw + animation ---------------- */
     function drawGraph() {
+      // Handle canvas resize on high-DPI screens if needed, but keeping simple for now
       ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
 
       // gentle physics movement      
       nodes.forEach(n => {
+        // Friction and boundary check
+        n.dx *= 0.99; n.dy *= 0.99;
         n.x += (n.dx || 0);
         n.y += (n.dy || 0);
+        
         // clamp      
-        if (n.x < 12) { n.x = 12; n.dx *= -1; }
-        if (n.x > graphCanvas.width - 12) { n.x = graphCanvas.width - 12; n.dx *= -1; }
-        if (n.y < 12) { n.y = 12; n.dy *= -1; }
-        if (n.y > graphCanvas.height - 12) { n.y = graphCanvas.height - 12; n.dy *= -1; }
+        if (n.x < 12) { n.x = 12; n.dx = Math.abs(n.dx) * 0.9; }
+        if (n.x > graphCanvas.width - 12) { n.x = graphCanvas.width - 12; n.dx = -Math.abs(n.dx) * 0.9; }
+        if (n.y < 12) { n.y = 12; n.dy = Math.abs(n.dy) * 0.9; }
+        if (n.y > graphCanvas.height - 12) { n.y = graphCanvas.height - 12; n.dy = -Math.abs(n.dy) * 0.9; }
       });
 
       // draw links by resolving ids to nodes      
@@ -814,13 +814,23 @@ async function sendMessage() {
         ctx.stroke();
       });
 
-      // draw nodes      
+      // emotional nodes
       nodes.forEach(n => {
         ctx.beginPath();
+        const intensity = Math.abs(n.emotion || 0);
+        const size = 6 + intensity * 1.5; // bigger = stronger emotion
         ctx.fillStyle = n.color || '#b8a6ff';
-        ctx.arc(n.x, n.y, 7, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
         ctx.fill();
-        // subtle halo for latest node      
+
+        // soft glow for strong emotions
+        if (intensity > 1) {
+          const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, size * 2);
+          grd.addColorStop(0, n.color.replace(/, 55%\)/, ', 75%)')); // Brighter center glow
+          grd.addColorStop(1, 'transparent');
+          ctx.fillStyle = grd;
+          ctx.beginPath(); ctx.arc(n.x, n.y, size * 2, 0, Math.PI * 2); ctx.fill();
+        }
       });
 
       requestAnimationFrame(drawGraph);
@@ -836,12 +846,13 @@ async function sendMessage() {
         const n = nodes[i];
         const dx = x - n.x;
         const dy = y - n.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 9) { found = n; break; }
+        if (Math.sqrt(dx * dx + dy * dy) < 10) { found = n; break; } // Increased hit area
       }
       if (found) {
-        tooltip.style.left = (ev.clientX - rect.left + 12) + 'px';
-        tooltip.style.top = (ev.clientY - rect.top + 12) + 'px';
-        tooltip.innerText = found.text.slice(0, 180);
+        // Adjust position relative to the graph canvas for fixed positioning
+        tooltip.style.left = (rect.left + x + 12) + 'px';
+        tooltip.style.top = (rect.top + y + 12) + 'px';
+        tooltip.innerText = `[${found.emotion > 0 ? 'Positive' : found.emotion < 0 ? 'Negative' : 'Neutral'}] ${found.text.slice(0, 180)}`;
         tooltip.style.opacity = 1;
       } else {
         tooltip.style.opacity = 0;
@@ -857,10 +868,9 @@ async function sendMessage() {
         const n = nodes[i];
         const dx = x - n.x, dy = y - n.y;
         if (Math.sqrt(dx * dx + dy * dy) < 10) {
-          // append a quick AI reaction and show node text      
-          messages.push({ who: 'ai', text: 'I see this memory: "' + n.text.slice(0, 120) + '"', ts: Date.now() });
+          messages.push({ who: 'ai', text: 'I recall this memory: "' + n.text.slice(0, 120) + '"', ts: Date.now() });
           saveMessages();
-          appendMessage('I see this memory: "' + n.text.slice(0, 120) + '"', 'ai', Date.now());
+          appendMessage('I recall this memory: "' + n.text.slice(0, 120) + '"', 'ai', Date.now());
           return;
         }
       }
@@ -868,32 +878,29 @@ async function sendMessage() {
 
     /* --------------- Export / clear / save actions --------------- */
     exportBtn.addEventListener('click', () => {
-  // build transcript from messages
-  const lines = messages.map(m => {
-    const who = m.who === 'user' ? 'You' : 'MindChat AI';
-    return `[${new Date(m.ts).toLocaleString()}] ${who}: ${m.text}`;
-  }).join('\n\n');
+        const lines = messages.map(m => {
+          const who = m.who === 'user' ? 'You' : 'MindChat AI';
+          return `[${new Date(m.ts).toLocaleString()}] ${who}: ${m.text}`;
+        }).join('\n\n');
 
-  if (!lines) {
-    alert("No messages to export!");
-    return;
-  }
+        if (!lines || messages.length <= 1) { // Check for just the greeting
+          alert("No significant messages to export!");
+          return;
+        }
 
-  const blob = new Blob([lines], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `MindChat_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-});
+        const blob = new Blob([lines], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `MindChat_Transcript_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
 
     clearGraphBtn.addEventListener('click', () => {
-      if (!confirm('Clear all memory nodes, links, and saved nodes?')) return;
+      if (!confirm('Clear all memory nodes, links, and saved nodes from graph? (This does not affect chat sessions).')) return;
       nodes = []; links = []; saveNodes(); saveLinks();
-      // do not remove sessions/messages (optionally you can)      
-      drawGraph();
-      alert('Memory cleared.');
+      alert('Graph Memory cleared.');
     });
 
     downloadGraphBtn.addEventListener('click', () => {
@@ -913,113 +920,34 @@ async function sendMessage() {
     /* -------------- Messages load/render at start -------------- */
     function renderMessages() {
       chatWindow.innerHTML = '';
-      if (!messages || messages.length === 0) {
-        // greeting      
+      if (!messages || messages.length === 0 || !activeSession) {
         const welcomeText = 'Hello 👋 I’m MindChat AI, your memory companion. What’s on your mind today?';
         messages = [{ who: 'ai', text: welcomeText, ts: Date.now() }];
-        saveMessages();
+        // Only save initial message if a session is active
+        if (activeSession) saveMessages(); 
       }
       messages.forEach(m => appendMessage(m.text, m.who, m.ts));
+      // Ensure scroll on load
+      setTimeout(() => chatWindow.scrollTop = chatWindow.scrollHeight, 100);
     }
 
     /* -------------- initial render -------------- */
+    // Ensure nodes have 'emotion' field if loaded from older storage
+    nodes = nodes.map(n => ({...n, emotion: n.emotion || analyzeEmotion(n.text)})); 
+    
     renderSessions();
     if (!activeSession && sessions.length > 0) {
       setActiveSession(sessions[0].id);
+    } else if (!activeSession) {
+        // Create a default session if none exist
+        const defaultSessionId = uid('sess');
+        const defaultSession = { id: defaultSessionId, name: 'Default Session', ts: Date.now(), messages: [] };
+        sessions.push(defaultSession);
+        saveSessions();
+        setActiveSession(defaultSessionId);
     }
     renderMessages();
-    drawGraph();
-
-    /* keep graph animation alive even if no nodes */
     requestAnimationFrame(drawGraph);
-
-    /* ---------------- Step 5: Emotional Intensity Layer ---------------- */
-
-    // Basic sentiment estimation (light heuristic)
-    function analyzeEmotion(text) {
-      const positive = ['love', 'happy', 'joy', 'beautiful', 'great', 'like', 'peace', 'calm', 'hope', 'smile'];
-      const negative = ['sad', 'hate', 'angry', 'pain', 'cry', 'fear', 'bad', 'hurt', 'lonely', 'tired'];
-      let score = 0;
-      text.toLowerCase().split(/\s+/).forEach(w => {
-        if (positive.includes(w)) score += 1;
-        if (negative.includes(w)) score -= 1;
-      });
-      return Math.max(-3, Math.min(3, score)); // clamp -3 to +3
-    }
-
-    // Modify addNodeToGraph to include emotion strength
-    const _origAddNodeToGraph = addNodeToGraph;
-    addNodeToGraph = function (text, type, ts) {
-      const emotion = analyzeEmotion(text);
-      const KW = extractKeywords(text);
-      const x = 30 + Math.random() * (graphCanvas.width - 60);
-      const y = 30 + Math.random() * (graphCanvas.height - 60);
-      const baseColor = type === 'user' ? '#7b5cff' : '#b8a6ff';
-
-      // hue shift by emotion
-      const hueShift = 240 + (emotion * 20); // -ve = blue, +ve = warm
-      const nodeColor = `hsl(${hueShift}, 100%, 70%)`;
-
-      const node = { id: uid('n'), text, ts, x, y, color: nodeColor, dx: (Math.random() - .5) * 1.2, dy: (Math.random() - .5) * 1.2, keywords: KW, emotion };
-
-      // keyword linking
-      const matches = nodes.filter(n => n.keywords.some(k => KW.includes(k)));
-      const toLink = matches.slice(-3);
-      nodes.push(node);
-      toLink.forEach(m => links.push({ a: m.id, b: node.id }));
-      if (toLink.length === 0 && nodes.length > 1) {
-        links.push({ a: nodes[nodes.length - 2].id, b: node.id });
-      }
-      saveNodes(); saveLinks();
-      drawGraph();
-    };
-
-    // update drawGraph to reflect emotional pulse color
-    const _origDrawGraph = drawGraph;
-    drawGraph = function () {
-      ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-
-      // physics
-      nodes.forEach(n => {
-        n.x += (n.dx || 0);
-        n.y += (n.dy || 0);
-        if (n.x < 12 || n.x > graphCanvas.width - 12) n.dx *= -1;
-        if (n.y < 12 || n.y > graphCanvas.height - 12) n.dy *= -1;
-      });
-
-      // links
-      ctx.lineWidth = 1.2;
-      ctx.strokeStyle = 'rgba(123,92,255,0.22)';
-      links.forEach(l => {
-        const a = nodes.find(n => n.id === l.a), b = nodes.find(n => n.id === l.b);
-        if (!a || !b) return;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      });
-
-      // emotional nodes
-      nodes.forEach(n => {
-        ctx.beginPath();
-        const intensity = Math.abs(n.emotion || 0);
-        const size = 6 + intensity * 2; // bigger = stronger emotion
-        ctx.fillStyle = n.color || '#b8a6ff';
-        ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
-        ctx.fill();
-
-        // soft glow for strong emotions
-        if (intensity > 1) {
-          const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, size * 3);
-          grd.addColorStop(0, n.color);
-          grd.addColorStop(1, 'transparent');
-          ctx.fillStyle = grd;
-          ctx.beginPath(); ctx.arc(n.x, n.y, size * 3, 0, Math.PI * 2); ctx.fill();
-        }
-      });
-
-      requestAnimationFrame(drawGraph);
-    };
-
-    console.log("✅ Step 5: Emotional visualization active");
-
-</script>
+  </script>
 </body>
 </html>
