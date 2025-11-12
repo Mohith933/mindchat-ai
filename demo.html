@@ -645,12 +645,22 @@ document.getElementById('toggleGraph').addEventListener('click', () => {
 
    function detectMood(text) {
   text = text.toLowerCase();
-  if (text.includes("sad") || text.includes("tired") || text.includes("lonely")) return "sad";
-  if (text.includes("happy") || text.includes("excited") || text.includes("great")) return "happy";
-  if (text.includes("angry") || text.includes("mad")) return "angry";
-  if (text.includes("love") || text.includes("like") || text.includes("crush")) return "love";
+
+  if (text.includes("sad") || text.includes("tired") || text.includes("lonely") || text.includes("depressed"))
+    return "sad";
+  if (text.includes("happy") || text.includes("excited") || text.includes("great") || text.includes("joy"))
+    return "happy";
+  if (text.includes("angry") || text.includes("mad") || text.includes("annoyed"))
+    return "angry";
+  if (text.includes("love") || text.includes("like") || text.includes("crush") || text.includes("heart"))
+    return "love";
   return "neutral";
 }
+
+// Memory to avoid repeating last mood or same message
+let lastMood = null;
+let lastReply = null;
+
 function generateAIReply(userText) {
   const mood = detectMood(userText);
 
@@ -681,45 +691,59 @@ function generateAIReply(userText) {
       "I’m linking this with your last thought in memory 🧠"
     ]
   };
+
   const group = replies[mood];
-  return group[Math.floor(Math.random() * group.length)];
+  let reply;
+
+  // choose a new reply different from the last one
+  do {
+    reply = group[Math.floor(Math.random() * group.length)];
+  } while (reply === lastReply && group.length > 1);
+
+  lastReply = reply;
+  lastMood = mood;
+
+  // Add some natural personalization
+  const randomHint = [
+    "✨", "🌸", "💫", "☁️", "🌿", "🌙"
+  ];
+  const hint = randomHint[Math.floor(Math.random() * randomHint.length)];
+
+  return `${reply} ${hint}`;
 }
+
 function setTyping(on) {
   typingIndicator.textContent = on ? "MindChat is typing…" : "";
 }
 
-    /* ------------- Message send flow ------------- */
-    async function sendMessage() {
-      const text = userInput.value.trim();
-      if (!text) return;
-      const ts = Date.now();
-      // add user message      
-      messages.push({ who: 'user', text, ts });
-      saveMessages();
-      appendMessage(text, 'user', ts);
-      addNodeToGraph(text, 'user', ts);
-      userInput.value = '';
-      // show typing      
-      setTyping(true);
-      // small random delay 500-1200ms      
-      const delay = 600 + Math.floor(Math.random() * 600);
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        const reply = generateAIReply(text);
-        const ts2 = Date.now();
-        messages.push({ who: 'ai', text: reply, ts: ts2 });
-        saveMessages();
-        appendMessage(reply, 'ai', ts2);
-        addNodeToGraph(reply, 'ai', ts2);
-        setTyping(false);
-      }, delay);
-    }
+/* ------------- Message send flow ------------- */
+async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text) return;
 
-    /* allow ctrl+enter or Enter to send */
-    userInput.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { sendMessage(); }
-    });
+  const ts = Date.now();
+  messages.push({ who: 'user', text, ts });
+  saveMessages();
+  appendMessage(text, 'user', ts);
+  addNodeToGraph(text, 'user', ts);
+  userInput.value = '';
 
+  setTyping(true);
+
+  const delay = 600 + Math.floor(Math.random() * 600);
+  clearTimeout(typingTimeout);
+
+  typingTimeout = setTimeout(() => {
+    const reply = generateAIReply(text);
+    const ts2 = Date.now();
+
+    messages.push({ who: 'ai', text: reply, ts: ts2 });
+    saveMessages();
+    appendMessage(reply, 'ai', ts2);
+    addNodeToGraph(reply, 'ai', ts2);
+    setTyping(false);
+  }, delay);
+}
     /* wire send button */
     sendBtn.addEventListener('click', sendMessage);
 
