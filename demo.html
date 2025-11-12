@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MindChat AI — Memory Companion (Step 5)</title>
+  <title>MindChat AI — Memory Companion (Page Scrolling)</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -11,7 +11,7 @@
       --text: #111827;
       --accent: #7b5cff;
       --muted: #eef0fb;
-      --error: #ff5c77; /* Added for visual clarity */
+      --error: #ff5c77;
     }
 
     @media(prefers-color-scheme:dark) {
@@ -20,7 +20,7 @@
         --text: #eef2ff;
         --accent: #a58dff;
         --muted: #121217;
-        --error: #ff8c99; /* Added for visual clarity */
+        --error: #ff8c99;
       }
     }
 
@@ -33,9 +33,10 @@
 body {
   background: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
-  overflow-y: auto; 
+  /* ⚠️ KEY CHANGE: Allow body to scroll content */
+  overflow-x: hidden; 
   display: block;   
+  min-height: 100vh; /* Optional, just for minimum visual height */
 }
 
    .sidebar {
@@ -43,14 +44,15 @@ body {
   top: 0;
   left: 0;
   width: 260px;
-  height: 100vh;
+  /* ⚠️ KEY CHANGE: Changed from 100vh to ensure it stays fixed */
+  height: 100%; 
   background: var(--muted);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  transition: transform 0.3s ease-in-out; /* Added for mobile toggle */
+  transition: transform 0.3s ease-in-out;
 }
 
     .sidebar h2 {
@@ -111,12 +113,14 @@ body {
   margin-right: 340px; 
   border-left: 1px solid rgba(0, 0, 0, 0.04);
   border-right: 1px solid rgba(0, 0, 0, 0.04);
-  width: calc(100% - 600px);
+  /* ⚠️ KEY CHANGE: Allow main content to grow */
+  width: calc(100% - 600px); 
+  min-height: 100vh; /* Ensure full visible height */
 }
 
     .header {
       width: 100%;
-      height:80px;
+      height: 80px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -124,8 +128,8 @@ body {
       background: var(--bg);
       color: var(--text);
       position: sticky;
-      top:0;
-      z-index: 5; /* Ensure header stays on top */
+      top: 0;
+      z-index: 5;
     }
 
     .header h1 {
@@ -139,7 +143,8 @@ body {
   gap: 12px;
   padding: 16px;
   overflow: visible; 
-  height: auto;
+  /* ⚠️ KEY CHANGE: Set min-height to push content down */
+  min-height: calc(100vh - 80px); 
 }
 
 
@@ -148,7 +153,8 @@ body {
   display: flex;
   flex-direction: column;
   background: transparent;
-  height: calc(100vh - 120px); 
+  /* ⚠️ KEY CHANGE: Removed fixed height to allow vertical growth */
+  height: auto; 
 }
 
 .chat-window {
@@ -158,7 +164,9 @@ body {
   flex-direction: column;
   gap: 10px;
   scroll-behavior: smooth;
-  overflow-y: auto; /* Ensure chat window scrolls */
+  /* ⚠️ KEY CHANGE: Removed overflow auto/scroll to allow content to push the page */
+  overflow-y: visible; 
+  min-height: 200px; /* Minimum visual height */
 }
 
 .input-area {
@@ -168,7 +176,8 @@ body {
   padding: 5px;
   border-top: 1px solid rgba(0, 0, 0, 0.03);
   background: var(--bg);
-  position: sticky;
+  /* ⚠️ KEY CHANGE: Changed from sticky/fixed to relative so it scrolls with content */
+  position: relative; 
   bottom: 0; 
 }
 
@@ -206,7 +215,7 @@ body {
       border-radius: 10px;
       border: 1px solid rgba(0, 0, 0, 0.06);
       outline: none;
-      background: var(--bg); /* Ensure input background respects theme */
+      background: var(--bg);
       color: var(--text);
     }
 
@@ -225,7 +234,8 @@ body {
   top: 0;
   right: 0;
   width: 340px;
-  height: 100vh;
+  /* ⚠️ KEY CHANGE: Changed from 100vh to ensure it stays fixed */
+  height: 100%; 
   padding: 18px;
   background: var(--muted);
   border-radius: 0;
@@ -233,7 +243,7 @@ body {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  transition: transform 0.3s ease-in-out; /* Added for mobile toggle */
+  transition: transform 0.3s ease-in-out;
     }
     .graph-canvas {
       background: #fff;
@@ -287,13 +297,13 @@ body {
   .sidebar {
     position: fixed;
     width: 80%;
-    transform: translateX(-100%); /* Hidden by default */
+    transform: translateX(-100%);
     z-index: 20;
-    display: flex; /* Override display:none */
+    display: flex;
   }
   
   .sidebar.active {
-    transform: translateX(0); /* Shown when active */
+    transform: translateX(0);
   }
 
     .header {
@@ -314,13 +324,13 @@ body {
     width: 80%;
     left: auto;
     right: 0;
-    transform: translateX(100%); /* Hidden by default */
+    transform: translateX(100%);
     z-index: 20;
-    display: flex; /* Override display:none */
+    display: flex;
   }
   
   .side-graph.active {
-    transform: translateX(0); /* Shown when active */
+    transform: translateX(0);
   }
    
   .header h1 {
@@ -339,7 +349,7 @@ body {
     margin-left: 0;
     margin-right: 0;
     width: 100%;
-    padding: 0; /* Let chat-window handle padding */
+    padding: 0;
   }
 
   .message {
@@ -351,7 +361,8 @@ body {
   }
 
   .input-area {
-    position: fixed;
+    /* ⚠️ KEY CHANGE: On mobile, input area still needs to be sticky/fixed to follow the viewport */
+    position: sticky; 
     bottom: 0;
     left: 0;
     width: 100%;
@@ -420,7 +431,8 @@ body {
         <div style="display:flex; gap:8px;">
           <button id="clearGraphBtn" class="clear-btn small">🧹 Clear Graph</button>
           <button id="saveNodesBtn" class="btn small ghost">Save Nodes</button>
-          <button id="downloadGraphBtn" class="btn small ghost">Export JSON</button> </div>
+          <button id="downloadGraphBtn" class="btn small ghost">Export JSON</button>
+        </div>
         <div id="tooltip" class="tooltip" aria-hidden="true"></div>
       </div>
 
@@ -428,7 +440,7 @@ body {
   </div>
   <script>
     /* ------------------------------      
-      MindChat Step 5 — Final JS (Corrected)      
+      MindChat Step 5 — Final JS (Corrected Toggle Logic)      
       -------------------------------*/
 
     const chatWindow = document.getElementById('chatWindow');
@@ -445,11 +457,11 @@ body {
     const newSessionBtn = document.getElementById('newSessionBtn');
     const saveSessionBtn = document.getElementById('saveSessionBtn');
     const clearGraphBtn = document.getElementById('clearGraphBtn');
-    const downloadGraphBtn = document.getElementById('downloadGraphBtn'); // Defined button element
+    const downloadGraphBtn = document.getElementById('downloadGraphBtn');
     const saveNodesBtn = document.getElementById('saveNodesBtn');
     
     // --- Global State ---
-    let typingTimeout = null; // ✅ FIXED: Declared typingTimeout
+    let typingTimeout = null;
     let lastMood = null;
     let lastReply = null;
     
@@ -483,36 +495,36 @@ body {
     }
 
     // --- Mobile toggle buttons ---
-const sidebar = document.querySelector('.sidebar');
-const graph = document.querySelector('.side-graph');
+    const sidebar = document.querySelector('.sidebar');
+    const graph = document.querySelector('.side-graph');
 
-document.getElementById('toggleSidebar').addEventListener('click', (e) => {
-  e.stopPropagation(); // Prevent click from triggering document listener
-  sidebar.classList.toggle('active');
-  graph.classList.remove('active'); // Close graph when opening sidebar
-});
+    document.getElementById('toggleSidebar').addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('active');
+      graph.classList.remove('active');
+    });
 
-document.getElementById('toggleGraph').addEventListener('click', (e) => {
-  e.stopPropagation();
-  graph.classList.toggle('active');
-  sidebar.classList.remove('active'); // Close sidebar when opening graph
-});
+    document.getElementById('toggleGraph').addEventListener('click', (e) => {
+      e.stopPropagation();
+      graph.classList.toggle('active');
+      sidebar.classList.remove('active');
+    });
 
-// --- Prevent accidental closing when interacting inside ---
-sidebar.addEventListener('click', (e) => e.stopPropagation());
-graph.addEventListener('click', (e) => e.stopPropagation());
+    // --- Prevent accidental closing when interacting inside ---
+    sidebar.addEventListener('click', (e) => e.stopPropagation());
+    graph.addEventListener('click', (e) => e.stopPropagation());
 
-// --- Close both when clicking outside ---
-document.addEventListener('click', (e) => {
-  const isInsideSidebar = sidebar.contains(e.target);
-  const isInsideGraph = graph.contains(e.target);
-  const isToggleBtn = e.target.closest('#toggleSidebar, #toggleGraph');
+    // --- Close both when clicking outside ---
+    document.addEventListener('click', (e) => {
+      const isInsideSidebar = sidebar.contains(e.target);
+      const isInsideGraph = graph.contains(e.target);
+      const isToggleBtn = e.target.closest('#toggleSidebar, #toggleGraph');
 
-  if (!isInsideSidebar && !isInsideGraph && !isToggleBtn) {
-    sidebar.classList.remove('active');
-    graph.classList.remove('active');
-  }
-});
+      if (!isInsideSidebar && !isInsideGraph && !isToggleBtn) {
+        sidebar.classList.remove('active');
+        graph.classList.remove('active');
+      }
+    });
 
     /* ------------- Sessions UI ------------- */
     function renderSessions() {
@@ -542,7 +554,7 @@ document.addEventListener('click', (e) => {
     newSessionBtn.addEventListener('click', () => {
       const name = prompt('Session name (optional)') || 'Session ' + new Date().toLocaleString();
       const id = uid('sess');
-      const s = { id, name, ts: Date.now(), messages: [] }; // initialize with empty messages
+      const s = { id, name, ts: Date.now(), messages: [] };
       sessions.unshift(s);
       saveSessions();
       messages = [];
@@ -557,7 +569,6 @@ document.addEventListener('click', (e) => {
         alert('Create or load a session first (press New).');
         return;
       }
-      // attach messages snapshot to session object for quick restore      
       sessions = sessions.map(s => {
         if (s.id === activeSession) {
           return { ...s, messages: messages.slice(), ts: Date.now() };
@@ -574,7 +585,6 @@ document.addEventListener('click', (e) => {
       const loadId = ev.target.dataset.load;
       const delId = ev.target.dataset.del;
 
-      // ✅ FIXED: Session item click fallback (not on load/del buttons)
       if (!loadId && !delId && ev.target.closest('.session-item')) { 
         const sId = ev.target.closest('.session-item').querySelector('[data-load]')?.dataset.load;
         if (sId) {
@@ -584,11 +594,10 @@ document.addEventListener('click', (e) => {
             saveMessages();
             setActiveSession(sId);
             renderMessages();
-            requestAnimationFrame(() => chatWindow.scrollTop = chatWindow.scrollHeight);
+            requestAnimationFrame(() => window.scrollTo(0, document.body.scrollHeight));
         }
     }
 
-      // ✅ LOAD
       if (loadId) {
         const s = sessions.find((x) => x.id === loadId);
         if (!s) return;
@@ -596,11 +605,10 @@ document.addEventListener('click', (e) => {
         saveMessages();
         setActiveSession(loadId);
         renderMessages(); 
-        setTimeout(() => chatWindow.scrollTop = chatWindow.scrollHeight, 50);
+        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50);
         return;
       }
 
-      // ✅ DELETE
       if (delId) {
         if (!confirm("Delete this session?")) return;
         sessions = sessions.filter((x) => x.id !== delId);
@@ -617,23 +625,19 @@ document.addEventListener('click', (e) => {
       }
     });
 
-    // ✅ clear ALL memory from sidebar button
     document.getElementById("clearMemoryBtn").addEventListener("click", () => {
       if (!confirm("⚠️ Clear ALL sessions, messages, nodes, and links?")) return;
-      // wipe everything
-      localStorage.clear(); // Simpler way to clear all MindChat storage
+      localStorage.clear();
       
-      // reset runtime data
       nodes = [];
       links = [];
       sessions = [];
       messages = [];
       activeSession = null;
 
-      // refresh UI
       chatWindow.innerHTML = "";
       renderSessions();
-      drawGraph(); // Will continue animation but with empty data
+      drawGraph();
       alert("🧹 All MindChat memory cleared!");
     });
 
@@ -644,13 +648,12 @@ document.addEventListener('click', (e) => {
       el.className = 'message ' + (who === 'user' ? 'user' : 'ai');
       el.innerHTML = `<div>${escapeHtml(text)}</div><div class="meta">${who === 'user' ? 'You' : 'MindChat AI'} • ${new Date(ts).toLocaleTimeString()}</div>`;
       chatWindow.appendChild(el);
-      // force scroll to bottom
+      // ⚠️ KEY CHANGE: Scroll the entire window instead of chatWindow
       requestAnimationFrame(() => {
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+        window.scrollTo(0, document.body.scrollHeight);
       });
     }
 
-    // Safe text -> HTML      
     function escapeHtml(s) {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -701,7 +704,6 @@ function generateAIReply(userText) {
   const group = replies[mood];
   let reply;
 
-  // choose a new reply different from the last one
   do {
     reply = group[Math.floor(Math.random() * group.length)];
   } while (reply === lastReply && group.length > 1);
@@ -754,7 +756,6 @@ userInput.addEventListener('keydown', (e) => {
 
     /* ---------------- Graph logic (Emotional Layer) ---------------- */
     
-    // Basic sentiment estimation (light heuristic)
     function analyzeEmotion(text) {
       const positive = ['love', 'happy', 'joy', 'beautiful', 'great', 'like', 'peace', 'calm', 'hope', 'smile', 'excited', 'wonderful'];
       const negative = ['sad', 'hate', 'angry', 'pain', 'cry', 'fear', 'bad', 'hurt', 'lonely', 'tired', 'mad', 'annoyed', 'frustrated'];
@@ -763,7 +764,7 @@ userInput.addEventListener('keydown', (e) => {
         if (positive.includes(w)) score += 1;
         if (negative.includes(w)) score -= 1;
       });
-      return Math.max(-3, Math.min(3, score)); // clamp -3 to +3
+      return Math.max(-3, Math.min(3, score));
     }
     
     const STOP = new Set(['the', 'and', 'a', 'i', 'to', 'of', 'in', 'on', 'for', 'is', 'it', 'that', 'this', 'with', 'my', 'you', 'me', 'be', 'im', 'am']);
@@ -778,50 +779,40 @@ userInput.addEventListener('keydown', (e) => {
     function addNodeToGraph(text, type, ts) {
       const emotion = analyzeEmotion(text);
       const KW = extractKeywords(text);
-      // place node near center jitter      
       const x = 30 + Math.random() * (graphCanvas.width - 60);
       const y = 30 + Math.random() * (graphCanvas.height - 60);
       
-      // hue shift by emotion: 240 (blue/neutral) +/- (emotion * 20)
       const hueShift = 240 + (emotion * 20); 
-      const nodeColor = `hsl(${hueShift}, 85%, 55%)`; // reduced saturation/lightness for dark theme contrast
+      const nodeColor = `hsl(${hueShift}, 85%, 55%)`;
       
       const node = { id: uid('n'), text, ts, x, y, color: nodeColor, dx: (Math.random() - .5) * 1.2, dy: (Math.random() - .5) * 1.2, keywords: KW, emotion };
 
-      // link heuristics: link to recent nodes with shared keywords (max 3)      
       const matches = nodes.filter(n => n.keywords.some(k => KW.includes(k)));
       const toLink = matches.slice(-3);
       nodes.push(node);
       toLink.forEach(m => links.push({ a: m.id, b: node.id }));
       
-      // always link to last node if no keyword matches (continuity)      
       if (toLink.length === 0 && nodes.length > 1) {
         links.push({ a: nodes[nodes.length - 2].id, b: node.id });
       }
       saveNodes(); saveLinks();
-      // Don't call drawGraph here, let the animation frame loop handle it
     }
 
     /* ---------------- Graph draw + animation ---------------- */
     function drawGraph() {
-      // Handle canvas resize on high-DPI screens if needed, but keeping simple for now
       ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
 
-      // gentle physics movement      
       nodes.forEach(n => {
-        // Friction and boundary check
         n.dx *= 0.99; n.dy *= 0.99;
         n.x += (n.dx || 0);
         n.y += (n.dy || 0);
         
-        // clamp      
         if (n.x < 12) { n.x = 12; n.dx = Math.abs(n.dx) * 0.9; }
         if (n.x > graphCanvas.width - 12) { n.x = graphCanvas.width - 12; n.dx = -Math.abs(n.dx) * 0.9; }
         if (n.y < 12) { n.y = 12; n.dy = Math.abs(n.dy) * 0.9; }
         if (n.y > graphCanvas.height - 12) { n.y = graphCanvas.height - 12; n.dy = -Math.abs(n.dy) * 0.9; }
       });
 
-      // draw links by resolving ids to nodes      
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = 'rgba(123,92,255,0.22)';
       links.forEach(l => {
@@ -834,19 +825,17 @@ userInput.addEventListener('keydown', (e) => {
         ctx.stroke();
       });
 
-      // emotional nodes
       nodes.forEach(n => {
         ctx.beginPath();
         const intensity = Math.abs(n.emotion || 0);
-        const size = 6 + intensity * 1.5; // bigger = stronger emotion
+        const size = 6 + intensity * 1.5;
         ctx.fillStyle = n.color || '#b8a6ff';
         ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
         ctx.fill();
 
-        // soft glow for strong emotions
         if (intensity > 1) {
           const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, size * 2);
-          grd.addColorStop(0, n.color.replace(/, 55%\)/, ', 75%)')); // Brighter center glow
+          grd.addColorStop(0, n.color.replace(/, 55%\)/, ', 75%)'));
           grd.addColorStop(1, 'transparent');
           ctx.fillStyle = grd;
           ctx.beginPath(); ctx.arc(n.x, n.y, size * 2, 0, Math.PI * 2); ctx.fill();
@@ -866,12 +855,11 @@ userInput.addEventListener('keydown', (e) => {
         const n = nodes[i];
         const dx = x - n.x;
         const dy = y - n.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 10) { found = n; break; } // Increased hit area
+        if (Math.sqrt(dx * dx + dy * dy) < 10) { found = n; break; }
       }
       if (found) {
-        // Adjust position relative to the graph canvas for fixed positioning
-        tooltip.style.left = (rect.left + x + 12) + 'px';
-        tooltip.style.top = (rect.top + y + 12) + 'px';
+        tooltip.style.left = (ev.clientX + 12) + 'px'; // Use clientX/Y as canvas is fixed position
+        tooltip.style.top = (ev.clientY + 12) + 'px';
         tooltip.innerText = `[${found.emotion > 0 ? 'Positive' : found.emotion < 0 ? 'Negative' : 'Neutral'}] ${found.text.slice(0, 180)}`;
         tooltip.style.opacity = 1;
       } else {
@@ -903,7 +891,7 @@ userInput.addEventListener('keydown', (e) => {
           return `[${new Date(m.ts).toLocaleString()}] ${who}: ${m.text}`;
         }).join('\n\n');
 
-        if (!lines || messages.length <= 1) { // Check for just the greeting
+        if (!lines || messages.length <= 1) {
           alert("No significant messages to export!");
           return;
         }
@@ -943,23 +931,20 @@ userInput.addEventListener('keydown', (e) => {
       if (!messages || messages.length === 0 || !activeSession) {
         const welcomeText = 'Hello 👋 I’m MindChat AI, your memory companion. What’s on your mind today?';
         messages = [{ who: 'ai', text: welcomeText, ts: Date.now() }];
-        // Only save initial message if a session is active
         if (activeSession) saveMessages(); 
       }
       messages.forEach(m => appendMessage(m.text, m.who, m.ts));
-      // Ensure scroll on load
-      setTimeout(() => chatWindow.scrollTop = chatWindow.scrollHeight, 100);
+      // ⚠️ KEY CHANGE: Scroll the entire window on load
+      setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
     }
 
     /* -------------- initial render -------------- */
-    // Ensure nodes have 'emotion' field if loaded from older storage
     nodes = nodes.map(n => ({...n, emotion: n.emotion || analyzeEmotion(n.text)})); 
     
     renderSessions();
     if (!activeSession && sessions.length > 0) {
       setActiveSession(sessions[0].id);
     } else if (!activeSession) {
-        // Create a default session if none exist
         const defaultSessionId = uid('sess');
         const defaultSession = { id: defaultSessionId, name: 'Default Session', ts: Date.now(), messages: [] };
         sessions.push(defaultSession);
