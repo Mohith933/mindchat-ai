@@ -844,18 +844,25 @@ function setTyping(on) {
 
     /* --------------- Export / clear / save actions --------------- */
     exportBtn.addEventListener('click', () => {
-      // build transcript from messages      
-      const lines = messages.map(m => {
-        const who = m.who === 'user' ? 'You' : 'MindChat AI';
-        return `[${new Date(m.ts).toLocaleString()}] ${who}: ${m.text}`;
-      }).join('\n\n');
-      if (!lines) return alert('No messages to export.');
-      const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'mindchat_transcript_' + (new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')) + '.txt';
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    });
+  // build transcript from messages
+  const lines = messages.map(m => {
+    const who = m.who === 'user' ? 'You' : 'MindChat AI';
+    return `[${new Date(m.ts).toLocaleString()}] ${who}: ${m.text}`;
+  }).join('\n\n');
+
+  if (!lines) {
+    alert("No messages to export!");
+    return;
+  }
+
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `MindChat_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
 
     clearGraphBtn.addEventListener('click', () => {
       if (!confirm('Clear all memory nodes, links, and saved nodes?')) return;
