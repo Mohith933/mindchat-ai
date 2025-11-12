@@ -483,16 +483,37 @@ body {
     }
 
     // --- Mobile toggle buttons ---
-    const sidebar = document.querySelector('.sidebar');
-    const graph = document.querySelector('.side-graph');
-    document.getElementById('toggleSidebar').addEventListener('click', () => {
-      sidebar.classList.toggle('active');
-      graph.classList.remove('active'); // Close graph when opening sidebar
-    });
-    document.getElementById('toggleGraph').addEventListener('click', () => {
-      graph.classList.toggle('active');
-      sidebar.classList.remove('active'); // Close sidebar when opening graph
-    });
+    // --- Mobile toggle buttons ---
+const sidebar = document.querySelector('.sidebar');
+const graph = document.querySelector('.side-graph');
+
+document.getElementById('toggleSidebar').addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent click from triggering document listener
+  sidebar.classList.toggle('active');
+  graph.classList.remove('active'); // Close graph when opening sidebar
+});
+
+document.getElementById('toggleGraph').addEventListener('click', (e) => {
+  e.stopPropagation();
+  graph.classList.toggle('active');
+  sidebar.classList.remove('active'); // Close sidebar when opening graph
+});
+
+// --- Prevent accidental closing when interacting inside ---
+sidebar.addEventListener('click', (e) => e.stopPropagation());
+graph.addEventListener('click', (e) => e.stopPropagation());
+
+// --- Close both when clicking outside ---
+document.addEventListener('click', (e) => {
+  const isInsideSidebar = sidebar.contains(e.target);
+  const isInsideGraph = graph.contains(e.target);
+  const isToggleBtn = e.target.closest('#toggleSidebar, #toggleGraph');
+
+  if (!isInsideSidebar && !isInsideGraph && !isToggleBtn) {
+    sidebar.classList.remove('active');
+    graph.classList.remove('active');
+  }
+});
 
     /* ------------- Sessions UI ------------- */
     function renderSessions() {
