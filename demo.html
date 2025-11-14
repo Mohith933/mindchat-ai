@@ -291,6 +291,7 @@ body {
     }
 
 
+
     /* Mobile-first adjustments */
 @media (max-width: 1000px) {
   
@@ -383,6 +384,7 @@ body {
     opacity: 0.65;
   }
 }
+    
 
   </style>
 </head>
@@ -411,13 +413,13 @@ body {
       </div>
       <div class="controls-row">
         <button id="toggleGraph">🕸</button>
-        <div id="typingIndicator" class="small-muted"></div>
       </div>
     </div>
 
     <div class="container">
       <div class="chat-area" role="main">
         <div id="chatWindow" class="chat-window" aria-live="polite">
+           <div id="typingIndicator" class="small-muted"></div>
           </div>
         <div class="input-area">
           <input id="userInput" placeholder="Type your thought... (Ctrl+Enter to send)" aria-label="Type your thought">
@@ -724,8 +726,16 @@ function generateAIReply(userText) {
 }
 
 function setTyping(on) {
-  typingIndicator.textContent = on ? "MindChat is typing…" : "";
+  typingIndicator.style.display = on ? "block" : "none";
+
+  // Auto scroll when typing bubble appears
+  if (on) {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+  }
 }
+
 
 /* ------------- Message send flow ------------- */
 async function sendMessage() {
@@ -739,9 +749,12 @@ async function sendMessage() {
   addNodeToGraph(text, 'user', ts);
   userInput.value = '';
 
+  // 🟢 Show typing immediately
   setTyping(true);
 
+  // AI reply delay
   const delay = 600 + Math.floor(Math.random() * 600);
+
   clearTimeout(typingTimeout);
 
   typingTimeout = setTimeout(() => {
@@ -752,9 +765,12 @@ async function sendMessage() {
     saveMessages();
     appendMessage(reply, 'ai', ts2);
     addNodeToGraph(reply, 'ai', ts2);
+
+    // 🔴 Hide typing AFTER AI sends reply
     setTyping(false);
   }, delay);
 }
+
 
 sendBtn.addEventListener('click', sendMessage);
 userInput.addEventListener('keydown', (e) => {
