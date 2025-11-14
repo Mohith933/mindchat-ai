@@ -658,93 +658,74 @@ body {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-  // -----------------------------
+// -----------------------------
 // Mood Detection
 // -----------------------------
 function detectMood(text) {
   const input = text.toLowerCase();
 
   const moodKeywords = {
-    sad: ["sad", "tired", "lonely", "depressed", "hurt", "down", "empty"],
-    happy: ["happy", "excited", "great", "joy", "awesome"],
-    angry: ["angry", "mad", "annoyed", "frustrated", "irritated"],
-    love: ["love", "like", "crush", "heart", "admire"]
+    sad: ["sad", "tired", "lonely", "depressed", "hurt", "empty", "down"],
+    happy: ["happy", "excited", "great", "joy", "awesome", "good mood"],
+    angry: ["angry", "mad", "annoyed", "frustrated", "irritated", "rage"],
+    love: ["love", "like", "crush", "heart", "cherish", "admire", "affection"]
   };
 
+  // Check each mood category
   for (const mood in moodKeywords) {
     if (moodKeywords[mood].some(word => input.includes(word))) {
       return mood;
     }
   }
 
-  return "none"; // ⬅ return no mood detected
+  return "neutral";
 }
-
-
-
-// -----------------------------
-// AI Reply Generator
-// -----------------------------
-let lastReply = "";
-let lastMood = "";
 
 function generateAIReply(userText) {
   const mood = detectMood(userText);
-
-  const emotionalReplies = {
+  const replies = {
     happy: [
-      "I love your positive energy! What sparked it today? 😄"
+      "I love that energy! Tell me more about what made you smile 😄",
+      "That’s wonderful — it’s nice to hear your mood is bright!",
+      "Good vibes! What are you most thankful for today?"
     ],
     sad: [
-      "That sounds heavy… I’m here to listen if you want to share more. 🫂"
+      "I'm here with you. Want to talk about what made you feel this way? 🫂",
+      "It’s okay to feel down sometimes — what could help you right now?",
+      "That sounds heavy, but you’re not alone 🌙"
     ],
     angry: [
-      "I get that frustration. Want to talk about what caused it?"
+      "I sense frustration — want to unpack what triggered it?",
+      "It’s okay to feel angry, expressing it helps you heal.",
+      "Let’s slow down and take a breath together. 🧘"
     ],
     love: [
-      "Someone special on your mind? Tell me more 💞"
+      "Aww, that’s sweet — love always makes the world brighter 💞",
+      "Who’s on your mind right now?",
+      "That’s lovely. What do you cherish most about that person?"
+    ],
+    neutral: [
+      "I’m listening carefully — tell me more.",
+      "That’s interesting. How do you feel about it?",
+      "I’m linking this with your last thought in memory 🧠"
     ]
   };
 
-  const generalReplies = [
-    "I hear you. Want to tell me more about that?",
-    "That's interesting — how does it make you feel?",
-    "I'm thinking with you — what’s the part that matters most?",
-    "Let’s dive deeper — what do you feel is behind this?",
-    "I’m following — what’s the next thought that comes to you?",
-    "Tell me more, I’m listening carefully."
-  ];
-
+  const group = replies[mood];
   let reply;
 
-  if (mood !== "none") {
-    const group = emotionalReplies[mood];
+  do {
     reply = group[Math.floor(Math.random() * group.length)];
-  } else {
-    // Fallback for ANY kind of text
-    reply = generalReplies[Math.floor(Math.random() * generalReplies.length)];
-  }
-
-  // Prevent repetition
-  if (reply === lastReply) {
-    reply = generalReplies[(generalReplies.indexOf(reply) + 1) % generalReplies.length];
-  }
+  } while (reply === lastReply && group.length > 1);
 
   lastReply = reply;
   lastMood = mood;
-
   return reply;
 }
 
-
-
-// -----------------------------
-// Typing Indicator
-// -----------------------------
-function setTyping(isTyping) {
-  typingIndicator.textContent = isTyping ? "MindChat is thinking…" : "";
+function setTyping(on) {
+  typingIndicator.textContent = on ? "MindChat is typing…" : "";
 }
-
 
 /* ------------- Message send flow ------------- */
 async function sendMessage() {
