@@ -419,8 +419,8 @@ body {
     <div class="container">
       <div class="chat-area" role="main">
         <div id="chatWindow" class="chat-window" aria-live="polite">
-           <div id="typingIndicator" class="small-muted"></div>
           </div>
+          <div id="typingIndicator" class="small-muted"></div>
         <div class="input-area">
           <input id="userInput" placeholder="Type your thought... (Ctrl+Enter to send)" aria-label="Type your thought">
           <button id="sendBtn" class="send-btn">Send</button>
@@ -663,36 +663,30 @@ body {
 // -----------------------------
 // Mood Detection
 // -----------------------------
-// Detect greetings (so it doesn't behave like ChatGPT)
-function detectGreeting(text) {
+// Mood Detection
+// -----------------------------
+function detectMood(text) {
   const input = text.toLowerCase();
 
-  const greetings = [
-    "hi", "hello", "hey", "heyy", "hlo", "hola",
-    "good morning", "good night", "good evening",
-    "what's up", "sup", "yo"
-  ];
+  const moodKeywords = {
+    sad: ["sad", "tired", "lonely", "depressed", "hurt", "empty", "down"],
+    happy: ["happy", "excited", "great", "joy", "awesome", "good mood"],
+    angry: ["angry", "mad", "annoyed", "frustrated", "irritated", "rage"],
+    love: ["love", "like", "crush", "heart", "cherish", "admire", "affection"]
+  };
 
-  return greetings.some(greet => input.includes(greet));
+  // Check each mood category
+  for (const mood in moodKeywords) {
+    if (moodKeywords[mood].some(word => input.includes(word))) {
+      return mood;
+    }
+  }
+
+  return "neutral";
 }
 
 function generateAIReply(userText) {
-  // If greeting → respond like a memory companion, not a chatbot
-  if (detectGreeting(userText)) {
-    const greetReplies = [
-      "Hey, I’m here. What’s been on your mind lately? 🌙",
-      "Hello — I missed your thoughts. What’s happening inside today?",
-      "You’re here — that means something is on your mind. Want to share?",
-      "Hi… tell me what you’re feeling right now.",
-      "I’m listening. What part of your day stayed in your heart?"
-    ];
-
-    return greetReplies[Math.floor(Math.random() * greetReplies.length)];
-  }
-
-  // Normal mood-based replies
   const mood = detectMood(userText);
-
   const replies = {
     happy: [
       "I love that energy! Tell me more about what made you smile 😄",
@@ -722,8 +716,16 @@ function generateAIReply(userText) {
   };
 
   const group = replies[mood];
-  return group[Math.floor(Math.random() * group.length)];
-}
+  let reply;
+
+  do {
+    reply = group[Math.floor(Math.random() * group.length)];
+  } while (reply === lastReply && group.length > 1);
+
+  lastReply = reply;
+  lastMood = mood;
+  return reply;
+} 
 
 function setTyping(on) {
   typingIndicator.style.display = on ? "block" : "none";
