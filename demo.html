@@ -813,7 +813,24 @@ userInput.addEventListener('keydown', (e) => {
       const hueShift = 240 + (emotion * 20); 
       const nodeColor = `hsl(${hueShift}, 85%, 55%)`;
       
-      const node = { id: uid('n'), text, ts, x, y, color: nodeColor, dx: (Math.random() - .5) * 1.2, dy: (Math.random() - .5) * 1.2, keywords: KW, emotion };
+      const node = { 
+  id: uid('n'),
+  text, 
+  ts, 
+  x, 
+  y, 
+  color: nodeColor, 
+  dx: (Math.random() - .5) * 1.2, 
+  dy: (Math.random() - .5) * 1.2, 
+  keywords: KW, 
+  emotion,
+
+  // 🟣 NEW FIELDS START
+  emotionLabel: detectMood(text),     // e.g., "sad", "happy", "angry", "love", "neutral"
+  importance: Math.min(1, Math.abs(emotion) / 3),  
+  time: Date.now(),                   // memory timestamp
+  // 🟣 NEW FIELDS END
+};
 
       const matches = nodes.filter(n => n.keywords.some(k => KW.includes(k)));
       const toLink = matches.slice(-3);
@@ -875,25 +892,53 @@ userInput.addEventListener('keydown', (e) => {
 
     /* tooltip hover */
     graphCanvas.addEventListener('mousemove', (ev) => {
-      const rect = graphCanvas.getBoundingClientRect();
-      const x = ev.clientX - rect.left;
-      const y = ev.clientY - rect.top;
-      let found = null;
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const n = nodes[i];
-        const dx = x - n.x;
-        const dy = y - n.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 10) { found = n; break; }
-      }
-      if (found) {
-        tooltip.style.left = (ev.clientX + 12) + 'px'; // Use clientX/Y as canvas is fixed position
-        tooltip.style.top = (ev.clientY + 12) + 'px';
-        tooltip.innerText = `[${found.emotion > 0 ? 'Positive' : found.emotion < 0 ? 'Negative' : 'Neutral'}] ${found.text.slice(0, 180)}`;
-        tooltip.style.opacity = 1;
-      } else {
-        tooltip.style.opacity = 0;
-      }
-    });
+  const rect = graphCanvas.getBoundingClientRect();
+  const x = ev.clientX - rect.left;
+  const y = ev.clientY - rect.top;
+
+  let found = null;
+
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const dx = x - n.x;
+    const dy = y - n.y;
+    if (Math.sqrt(dx * dx + dy * dy) < 12) { 
+      found = n; 
+      break; 
+    }
+  }
+
+  if (found) {
+
+    const moodType = found.emotionLabel || (
+      found.emotion > 0 ? "Positive" :
+      found.emotion < 0 ? "Negative" :
+      "Neutral"
+    );
+
+    const intensityPercent = Math.round(Math.abs(found.emotion || 0) * 40);
+
+    const age = Math.floor((Date.now() - found.time) / 1000);
+    const ageText = age < 60 ? `${age}s ago`
+                 : age < 3600 ? `${Math.floor(age/60)}m ago`
+                 : `${Math.floor(age/3600)}h ago`;
+
+    tooltip.style.left = (ev.clientX + 12) + 'px';
+    tooltip.style.top = (ev.clientY + 12) + 'px';
+
+    tooltip.innerHTML = `
+      Mood: <b>${moodType}</b><br>
+      Intensity: <b>${intensityPercent}%</b><br>
+      Stored: <b>${ageText}</b><br><br>
+      <span style="opacity:0.8;">"${found.text.slice(0, 160)}"</span>
+    `;
+
+    tooltip.style.opacity = 1;
+
+  } else {
+    tooltip.style.opacity = 0;
+  }
+});
 
     /* canvas click: focus message or open detail (optional) */
     graphCanvas.addEventListener('click', (ev) => {
