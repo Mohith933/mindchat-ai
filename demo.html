@@ -660,6 +660,20 @@ body {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    function calculateEmotionalTrend() {
+  const recent = messages.slice(-20); // last 20 messages
+
+  if (recent.length === 0) return 0;
+
+  let sum = 0;
+  recent.forEach(m => {
+    if (typeof m.emotion === "number") sum += m.emotion;
+  });
+
+  return sum / recent.length; // -1 to +1
+}
+
+
 // -----------------------------
 // Mood Detection
 // -----------------------------
@@ -724,7 +738,21 @@ function generateAIReply(userText) {
 
   lastReply = reply;
   lastMood = mood;
+  
   return reply;
+  const trend = calculateEmotionalTrend();
+let trendNote = "";
+
+if (trend < -0.3) {
+  trendNote = " I also sense your emotional trend is dipping recently… I’m here with you.";
+} else if (trend > 0.3) {
+  trendNote = " You've been sounding brighter lately — it’s nice to see.";
+} else if (Math.abs(trend) < 0.1 && messages.length > 5) {
+  trendNote = " Your emotions seem steady today.";
+}
+
+return reply + trendNote;
+
 } 
 
 function setTyping(on) {
@@ -737,6 +765,8 @@ function setTyping(on) {
     });
   }
 }
+
+
 
 
 /* ------------- Message send flow ------------- */
@@ -803,6 +833,32 @@ userInput.addEventListener('keydown', (e) => {
         .filter(w => w.length > 2 && !STOP.has(w))
         .slice(0, 6);
     }
+
+    function detectRepetition(text) {
+  const t = text.toLowerCase();
+  let count = 0;
+
+  nodes.forEach(n => {
+    if (n.text.toLowerCase().includes(t.slice(0, 12))) {
+      count++;
+    }
+  });
+
+  return Math.min(count / 4, 1); // more repetition = more importance
+}
+
+
+function computeImportance(text, emotionScore) {
+  const lengthScore = Math.min(text.length / 120, 1);   // up to +1
+  const repeatScore = detectRepetition(text);           // 0 → 1
+  const emotionalScore = Math.abs(emotionScore) / 3;    // 0 → 1
+
+  let baseImportance = (lengthScore * 0.3) +
+                       (emotionalScore * 0.5) +
+                       (repeatScore * 0.2);
+
+  return Math.min(1, baseImportance);
+}
     
     function addNodeToGraph(text, type, ts) {
       const emotion = analyzeEmotion(text);
@@ -827,7 +883,7 @@ userInput.addEventListener('keydown', (e) => {
 
   // 🟣 NEW FIELDS START
   emotionLabel: detectMood(text),     // e.g., "sad", "happy", "angry", "love", "neutral"
-  importance: Math.min(1, Math.abs(emotion) / 3),  
+  importance: computeImportance(text, emotion),
   time: Date.now(),                   // memory timestamp
   // 🟣 NEW FIELDS END
 };
@@ -842,10 +898,17 @@ userInput.addEventListener('keydown', (e) => {
       }
       saveNodes(); saveLinks();
     }
+    const clusterCenters = {
+  happy: { x: 120, y: 120 },
+  sad: { x: 360, y: 120 },
+  angry: { x: 240, y: 260 }
+};
+
 
     /* ---------------- Graph draw + animation ---------------- */
     function drawGraph() {
       ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+      
 
       nodes.forEach(n => {
         n.dx *= 0.99; n.dy *= 0.99;
@@ -856,6 +919,7 @@ userInput.addEventListener('keydown', (e) => {
         if (n.x > graphCanvas.width - 12) { n.x = graphCanvas.width - 12; n.dx = -Math.abs(n.dx) * 0.9; }
         if (n.y < 12) { n.y = 12; n.dy = Math.abs(n.dy) * 0.9; }
         if (n.y > graphCanvas.height - 12) { n.y = graphCanvas.height - 12; n.dy = -Math.abs(n.dy) * 0.9; }
+        n.importance *= 0.9995;   // slow decay every frame
       });
 
       ctx.lineWidth = 1.2;
@@ -873,10 +937,19 @@ userInput.addEventListener('keydown', (e) => {
       nodes.forEach(n => {
         ctx.beginPath();
         const intensity = Math.abs(n.emotion || 0);
-        const size = 6 + intensity * 1.5;
+        const size = 5 + (n.importance * 10);
         ctx.fillStyle = n.color || '#b8a6ff';
         ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
         ctx.fill();
+        // ─── Emotion Cluster Gravity ─────────────────────────────
+if (n.emotionLabel && clusterCenters[n.emotionLabel]) {
+  const center = clusterCenters[n.emotionLabel];
+
+  // Pull node 5% toward its emotion center
+  n.x += (center.x - n.x) * 0.05;
+  n.y += (center.y - n.y) * 0.05;
+}
+
 
         if (intensity > 1) {
           const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, size * 2);
@@ -885,6 +958,7 @@ userInput.addEventListener('keydown', (e) => {
           ctx.fillStyle = grd;
           ctx.beginPath(); ctx.arc(n.x, n.y, size * 2, 0, Math.PI * 2); ctx.fill();
         }
+        
       });
 
       requestAnimationFrame(drawGraph);
