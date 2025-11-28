@@ -3,9 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <title>MindChat AI — Memory Companion (Page Scrolling)</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f6f7fb;
@@ -27,7 +26,7 @@
 
     * {
       box-sizing: border-box;
-      font-family: Poppins;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
       margin: 0;
       padding: 0;
     }
@@ -178,7 +177,7 @@ body {
   border-top: 1px solid rgba(0, 0, 0, 0.03);
   background: var(--bg);
   /* ⚠️ KEY CHANGE: Changed from sticky/fixed to relative so it scrolls with content */
-  position: sticky; 
+  position:sticky; 
   bottom: 0; 
 }
 
@@ -345,7 +344,6 @@ body {
   padding-left:10px;
   padding-right:10px;
   gap:16px;
-  padding-bottom:60px;
   }
   
   .main {
@@ -444,7 +442,7 @@ body {
   </div>
   <script>
     /* ------------------------------      
-      MindChat Step 5 — Final JS (Corrected Toggle Logic)      
+      MindChat Step 5 — Final JS (Corrected Toggle Logic)    
       -------------------------------*/
 
     const chatWindow = document.getElementById('chatWindow');
@@ -468,6 +466,16 @@ body {
     let typingTimeout = null;
     let lastMood = null;
     let lastReply = null;
+
+        /* ---------------- Personality Seeds ---------------- */
+const personality = {
+  warmth: 0.85,
+  empathy: 0.92,
+  humor: 0.4,
+  optimism: 0.73,
+  reflectiveness: 0.65
+};
+
     
     const STORAGE = {
       nodes: 'mindchat_nodes_v4',
@@ -497,6 +505,23 @@ body {
       renderSessions();
       renderMessages();
     }
+
+
+
+
+    // ⭐ Paste here
+function saveSnapshot(graph) {
+  const snapshot = {
+    time: Date.now(),
+    graph: graph
+  };
+  localStorage.setItem("mindchat_snapshot", JSON.stringify(snapshot));
+}
+
+function loadSnapshot() {
+  const data = localStorage.getItem("mindchat_snapshot");
+  return data ? JSON.parse(data) : null;
+}
 
     // --- Mobile toggle buttons ---
     const sidebar = document.querySelector('.sidebar');
@@ -701,6 +726,109 @@ function detectMood(text) {
   return "neutral";
 }
 
+function computeContextScore(text) {
+  const lower = text.toLowerCase();
+  let score = 0;
+
+  const boosters = ["really", "very", "so", "too", "extremely"];
+  const weakeners = ["maybe", "kind of", "slightly"];
+
+  boosters.forEach(b => { if (lower.includes(b)) score += 0.2; });
+  weakeners.forEach(w => { if (lower.includes(w)) score -= 0.1; });
+
+  // Normalize between 0 and 1
+  return Math.min(1, Math.max(0, 0.5 + score));
+}
+
+// ⭐ Paste here
+function microReaction(mood, intensity) {
+  if (intensity < 0.4) return "";
+
+  const reactions = {
+    sad: ["(hugging you softly)", "I'm staying with you 💙"],
+    happy: ["(smiling with you)", "Love the energy ✨"],
+    angry: ["(taking a breath with you)", "I'm here. It's okay."],
+    love: ["(blushing a little)", "Aww that’s sweet 💞"]
+  };
+
+  const group = reactions[mood];
+  return group ? group[Math.floor(Math.random() * group.length)] : "";
+}
+
+function applyPersonalityTone(text, mood) {
+  let t = text;
+
+  if (personality.empathy > 0.7 && (mood === "sad" || mood === "angry")) {
+    t = "I feel you deeply… " + t;
+  }
+
+  if (personality.optimism > 0.7 && mood === "sad") {
+    t += " But I promise there’s a tiny light ahead.";
+  }
+
+  if (personality.humor > 0.6 && mood === "happy") {
+    t += " 😄";
+  }
+
+  if (personality.reflectiveness > 0.7 && mood === "neutral") {
+    t += " Sometimes thoughts open hidden doors.";
+  }
+
+  if (personality.warmth > 0.8 && mood === "love") {
+    t = "💗 " + t;
+  }
+
+  return t;
+}
+
+// ⭐ Paste here
+function updateNodeInfluence(node, intensity) {
+  const newWeight = node.weight + intensity * 0.15;
+  node.weight = Math.min(1, newWeight);
+}
+
+function applyPersonalityToNode(node) {
+  let bonus = 0;
+
+  // Warm & Empathetic minds increase weight of emotional messages
+  if (personality.empathy > 0.7 && Math.abs(node.emotion) > 0.5) {
+    bonus += 0.1;
+  }
+
+  // Optimistic minds boost positive clusters
+  if (personality.optimism > 0.7 && node.emotion > 0) {
+    bonus += 0.08;
+  }
+
+  // Reflective personality boosts neutral or deep messages
+  if (personality.reflectiveness > 0.6 && node.emotion === 0) {
+    bonus += 0.05;
+  }
+
+  // Humor boosts happy/light nodes
+  if (personality.humor > 0.6 && node.mood === "happy") {
+    bonus += 0.04;
+  }
+
+  node.weight = Math.min(1, node.weight + bonus);
+}
+
+
+/* ---------------- Personality Mood Drift ---------------- */
+let mindchatMood = 0; // -1 = low, +1 = high
+
+function updateMoodDrift(userMood, contextScore) {
+  const change = (userMood === "sad" ? -0.1 :
+                 userMood === "happy" ? +0.1 :
+                 userMood === "love" ? +0.05 :
+                 userMood === "angry" ? -0.05 : 0);
+
+  mindchatMood += change * contextScore;
+  mindchatMood = Math.max(-1, Math.min(1, mindchatMood));
+}
+
+
+
 function generateAIReply(userText) {
   const mood = detectMood(userText);
   const replies = {
@@ -755,7 +883,11 @@ if (trend < -0.3) {
 
 return reply + trendNote;
 
+
 } 
+
+
+
 
 function setTyping(on) {
   typingIndicator.style.display = on ? "block" : "none";
@@ -799,6 +931,29 @@ async function sendMessage() {
     saveMessages();
     appendMessage(reply, 'ai', ts2);
     addNodeToGraph(reply, 'ai', ts2);
+
+    const mood = detectMood(text);
+const contextScore = computeContextScore(text);
+
+// Update graph node weights
+nodes.forEach(n => applyPersonalityToNode(n));
+
+
+// Micro reaction before full AI reply
+const reaction = microReaction(mood, contextScore);
+
+
+
+let thought = generateReply(text, mood);
+
+thought = applyPersonalityTone(thought, mood);
+
+const finalReply = (reaction ? reaction + " " : "") + thought;
+
+
+updateMoodDrift(mood, contextScore);
+
+
 
     // 🔴 Hide typing AFTER AI sends reply
     setTyping(false);
@@ -861,6 +1016,10 @@ function computeImportance(text, emotionScore) {
 
   return Math.min(1, baseImportance);
 }
+
+
+
+
     
     function addNodeToGraph(text, type, ts) {
       const emotion = analyzeEmotion(text);
@@ -900,11 +1059,15 @@ function computeImportance(text, emotionScore) {
       }
       saveNodes(); saveLinks();
     }
+    
     const clusterCenters = {
   happy: { x: 120, y: 120 },
   sad: { x: 360, y: 120 },
   angry: { x: 240, y: 260 }
 };
+
+
+
 
 
     /* ---------------- Graph draw + animation ---------------- */
