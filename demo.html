@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MindChat AI — Memory Companion (Page Scrolling)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f6f7fb;
@@ -26,7 +26,7 @@
 
     * {
       box-sizing: border-box;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      font-family: Poppins;
       margin: 0;
       padding: 0;
     }
@@ -445,6 +445,16 @@ body {
       MindChat Step 5 — Final JS (Corrected Toggle Logic)    
       -------------------------------*/
 
+
+      // --- MEMORY ENGINE CORE (required) ---
+let memoryGraph = [];
+
+    // stores group → [facts]
+let memoryWeights = {};   // stores strength of each fact
+let topNodes = [];        // most relevant memory keys
+let recentFacts = [];     // optional: for trend detection
+
+
     const chatWindow = document.getElementById('chatWindow');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -506,9 +516,6 @@ const personality = {
       renderMessages();
     }
 
-
-
-
     // ⭐ Paste here
 function saveSnapshot(graph) {
   const snapshot = {
@@ -522,6 +529,44 @@ function loadSnapshot() {
   const data = localStorage.getItem("mindchat_snapshot");
   return data ? JSON.parse(data) : null;
 }
+
+// compute simple similarity (token overlap)
+function textSimilarity(a, b) {
+  const A = new Set(a.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean));
+  const B = new Set(b.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean));
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  A.forEach(x => { if (B.has(x)) inter++; });
+  return inter / Math.max(A.size, B.size);
+}
+
+// consolidate nodes that are very similar (threshold 0.6)
+function consolidateMemoryNodes(threshold = 0.6) {
+  const merged = [];
+  const seen = new Set();
+
+  for (let i = 0; i < nodes.length; i++) {
+    if (seen.has(nodes[i].id)) continue;
+    const base = {...nodes[i]};
+    for (let j = i+1; j < nodes.length; j++) {
+      if (seen.has(nodes[j].id)) continue;
+      const sim = textSimilarity(base.text, nodes[j].text);
+      if (sim >= threshold) {
+        // merge weights, timestamps, keywords, emotion, importance
+        base.importance = Math.min(1, Math.max(base.importance || 0, nodes[j].importance || 0));
+        base.emotion = ((base.emotion||0) + (nodes[j].emotion||0)) / 2;
+        base.keywords = Array.from(new Set([...(base.keywords||[]), ...(nodes[j].keywords||[])]));
+        base.text = base.text.length >= nodes[j].text.length ? base.text : nodes[j].text;
+        seen.add(nodes[j].id);
+      }
+    }
+    merged.push(base);
+    seen.add(nodes[i].id);
+  }
+  nodes = merged;
+  saveNodes();
+}
+
 
     // --- Mobile toggle buttons ---
     const sidebar = document.querySelector('.sidebar');
@@ -670,7 +715,6 @@ function loadSnapshot() {
       alert("🧹 All MindChat memory cleared!");
     });
 
-
     /* -------------- Chat UI -------------- */
     function appendMessage(text, who, ts) {
       const el = document.createElement('div');
@@ -700,10 +744,6 @@ function loadSnapshot() {
   return sum / recent.length; // -1 to +1
 }
 
-
-// -----------------------------
-// Mood Detection
-// -----------------------------
 // Mood Detection
 // -----------------------------
 function detectMood(text) {
@@ -827,10 +867,143 @@ function updateMoodDrift(userMood, contextScore) {
   mindchatMood = Math.max(-1, Math.min(1, mindchatMood));
 }
 
+function detectPersonalFact(text) {
+  const t = text.toLowerCase();
+
+  // Pattern 1: I like X
+  if (t.startsWith("i like")) {
+    return { type: "like", item: text.split(/i like/i)[1].trim() };
+  }
+
+  // Pattern 2: I love X
+  if (t.startsWith("i love")) {
+    return { type: "love", item: text.split(/i love/i)[1].trim() };
+  }
+
+  // Pattern 3: I hate X
+  if (t.startsWith("i hate")) {
+    return { type: "hate", item: text.split(/i hate/i)[1].trim() };
+  }
+
+  // Pattern 4: My favourite X is Y
+  const favMatch = text.match(/my favourite (.+?) is (.+)/i);
+  if (favMatch) {
+    return { type: "favorite", item: favMatch[2].trim() };
+  }
+
+  // Pattern 5: favourite X (standalone)
+  const favMatch2 = text.match(/favourite (.+)/i);
+  if (favMatch2) {
+    return { type: "favorite", item: favMatch2[1].trim() };
+  }
+
+  return null;
+}
 
 
+
+function storeFact(item, type) {
+  memoryGraph.push({
+    node: item.trim(),
+    type: type,
+    weight: type === "hate" ? -1 : 1,
+    timestamp: Date.now()
+  });
+}
+
+
+
+function answerPersonalQuestion(text) {
+  const t = text.toLowerCase();
+
+  if (t.includes("favourite place"))
+    return topNode("place");
+
+  if (t.includes("favourite hero"))
+    return topNode("hero");
+
+  if (t.includes("what do i love"))
+    return topNode("love");
+
+  if (t.includes("what do i like"))
+    return topNode("like");
+
+  return null;
+}
+
+function answerFromMemory(query) {
+  const q = query.toLowerCase();
+
+  // 1. direct checks
+  const personal = answerPersonalQuestion(q);
+  if (personal) return personal;
+
+  // 2. fuzzy match
+  const scored = memoryGraph
+      .map(n => ({
+         score: textSimilarity(q, n.node.toLowerCase()),
+         node: n.node
+      }))
+      .filter(x => x.score > 0.3)
+      .sort((a, b) => b.score - a.score);
+
+  if (scored.length > 0) return scored[0].node;
+
+  return null;
+}
+
+
+
+function topNode(type) {
+  const items = memoryGraph.filter(n => n.type === type);
+  if (items.length === 0) return "I don't know yet!";
+  return items.sort((a,b)=>b.weight - a.weight)[0].node;
+}
+
+
+
+function answerFromMemory(query) {
+  const q = query.toLowerCase();
+  // simple rule checks first (existing)
+  const personal = answerPersonalQuestion(q);
+  if (personal) return personal;
+
+  // fuzzy search: find nodes with high similarity to query tokens
+  const scored = nodes.map(n => ({ id: n.id, score: textSimilarity(q, n.text), node: n }))
+                      .filter(x => x.score > 0.2)
+                      .sort((a,b)=>b.score - a.score);
+  if (scored.length > 0) {
+    return scored[0].node.text;
+  }
+
+  // fall back
+  return null;
+}
+
+function archiveOldNodes(days = 180) {
+  const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+  const archive = JSON.parse(localStorage.getItem('mindchat_archive') || '[]');
+  const keep = [];
+  nodes.forEach(n => {
+    if (n.time && n.time < cutoff) {
+      archive.push(n);
+    } else {
+      keep.push(n);
+    }
+  });
+  nodes = keep;
+  localStorage.setItem('mindchat_archive', JSON.stringify(archive));
+  saveNodes();
+}
+
+function exportFullData() {
+  const payload = { nodes, links, messages, groups: JSON.parse(localStorage.getItem('mindchat_groups_v1')||'[]'), archive: JSON.parse(localStorage.getItem('mindchat_archive')||'[]'), ts: Date.now() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  // same download logic...
+}
 function generateAIReply(userText) {
   const mood = detectMood(userText);
+
   const replies = {
     happy: [
       "I love that energy! Tell me more about what made you smile 😄",
@@ -840,11 +1013,11 @@ function generateAIReply(userText) {
     sad: [
       "I'm here with you. Want to talk about what made you feel this way? 🫂",
       "It’s okay to feel down sometimes — what could help you right now?",
-      "That sounds heavy, but you’re not alone 🌙"
+      "That sounds heavy… but you’re not alone 🌙"
     ],
     angry: [
       "I sense frustration — want to unpack what triggered it?",
-      "It’s okay to feel angry, expressing it helps you heal.",
+      "It’s okay to feel angry — expressing it helps.",
       "Let’s slow down and take a breath together. 🧘"
     ],
     love: [
@@ -859,34 +1032,31 @@ function generateAIReply(userText) {
     ]
   };
 
-  const group = replies[mood];
-  let reply;
+  const group = replies[mood] || replies.neutral;
 
+  // Pick a reply without repeating last time
+  let reply;
   do {
     reply = group[Math.floor(Math.random() * group.length)];
   } while (reply === lastReply && group.length > 1);
 
   lastReply = reply;
   lastMood = mood;
-  
-  return reply;
+
+  // Emotional trend addon
   const trend = calculateEmotionalTrend();
-let trendNote = "";
+  let trendNote = "";
 
-if (trend < -0.3) {
-  trendNote = " I also sense your emotional trend is dipping recently… I’m here with you.";
-} else if (trend > 0.3) {
-  trendNote = " You've been sounding brighter lately — it’s nice to see.";
-} else if (Math.abs(trend) < 0.1 && messages.length > 5) {
-  trendNote = " Your emotions seem steady today.";
+  if (trend < -0.3) {
+    trendNote = " I also sense your emotional trend is dipping recently… I'm here with you.";
+  } else if (trend > 0.3) {
+    trendNote = " You've been sounding brighter lately — it’s nice to see.";
+  } else if (Math.abs(trend) < 0.1 && messages.length > 5) {
+    trendNote = " Your emotions seem steady today.";
+  }
+
+  return reply + trendNote;
 }
-
-return reply + trendNote;
-
-
-} 
-
-
 
 
 function setTyping(on) {
@@ -901,21 +1071,47 @@ function setTyping(on) {
 }
 
 
+    function addMessage(text, who) {
+  const ts = Date.now();
+  messages.push({ who, text, ts });
+  saveMessages();
+  appendMessage(text, who, ts);
+  addNodeToGraph(text, who, ts);
+}
 
+
+function addNodeToGraph(text, who, ts) {
+  nodes.push({
+    id: uid("node"),
+    text,
+    who,
+    time: ts,
+    weight: 0.5,
+    emotion: 0,
+    importance: 0.5
+  });
+
+  saveNodes();
+  drawGraph && drawGraph(); // if exists
+}
 
 /* ------------- Message send flow ------------- */
+/* ------------- Message send flow (fixed & integrated) ------------- */
+/* ------------- FIXED FULL MESSAGE FLOW (v0.9) ------------- */
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
 
   const ts = Date.now();
+
+  // Save user message
   messages.push({ who: 'user', text, ts });
   saveMessages();
   appendMessage(text, 'user', ts);
   addNodeToGraph(text, 'user', ts);
   userInput.value = '';
 
-  // 🟢 Show typing immediately
+  // Show typing immediately
   setTyping(true);
 
   // AI reply delay
@@ -924,39 +1120,77 @@ async function sendMessage() {
   clearTimeout(typingTimeout);
 
   typingTimeout = setTimeout(() => {
-    const reply = generateAIReply(text);
-    const ts2 = Date.now();
 
-    messages.push({ who: 'ai', text: reply, ts: ts2 });
-    saveMessages();
-    appendMessage(reply, 'ai', ts2);
-    addNodeToGraph(reply, 'ai', ts2);
-
+    // ------------------------------
+    // 1. Detect mood & context
+    // ------------------------------
     const mood = detectMood(text);
-const contextScore = computeContextScore(text);
+    const contextScore = computeContextScore(text);
 
-// Update graph node weights
-nodes.forEach(n => applyPersonalityToNode(n));
-
-
-// Micro reaction before full AI reply
-const reaction = microReaction(mood, contextScore);
-
+    // ------------------------------
+    // 2. Store personal facts
+    // ------------------------------
+   const fact = detectPersonalFact(text);
+if (fact) storeFact(fact.item, fact.type);
 
 
-let thought = generateReply(text, mood);
+    // ------------------------------
+    // 3. Try memory answer first
+    // ------------------------------
+  let memoryAnswer = answerFromMemory(text);
 
-thought = applyPersonalityTone(thought, mood);
-
-const finalReply = (reaction ? reaction + " " : "") + thought;
-
-
-updateMoodDrift(mood, contextScore);
+if (memoryAnswer) {
+    addMessage(memoryAnswer, "ai");
+    return;
+}
 
 
+    // ------------------------------
+    // 4. If memoryAnswer exists → use it
+    // ------------------------------
+    let thought;
 
-    // 🔴 Hide typing AFTER AI sends reply
+    if (memoryAnswer) {
+      // Example: User asks "what is my favourite place?"
+      thought = memoryAnswer;
+    } else {
+      // No memory match → generate emotional + context reply
+      thought = generateReply(text, mood);
+    }
+
+    // ------------------------------
+    // 5. Apply personality tone
+    // ------------------------------
+    thought = applyPersonalityTone(thought, mood);
+
+    // ------------------------------
+    // 6. Add micro-reaction
+    // ------------------------------
+    const reaction = microReaction(mood, contextScore);
+    const finalReply = (reaction ? reaction + " " : "") + thought;
+
+    // ------------------------------
+    // 7. Update mood drift
+    // ------------------------------
+    updateMoodDrift(mood, contextScore);
+
+    // ------------------------------
+    // 8. Strengthen graph nodes
+    // ------------------------------
+    nodes.forEach(n => applyPersonalityToNode(n));
+
+    // ------------------------------
+    // 9. Save AI message
+    // ------------------------------
+    const ts2 = Date.now();
+    messages.push({ who: 'ai', text: finalReply, ts: ts2 });
+    saveMessages();
+    appendMessage(finalReply, 'ai', ts2);
+    addNodeToGraph(finalReply, 'ai', ts2);
+
+    // Hide typing now
     setTyping(false);
+
   }, delay);
 }
 
