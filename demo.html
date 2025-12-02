@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MindChat AI — Memory Companion (Page Scrolling)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f6f7fb;
@@ -26,7 +26,7 @@
 
     * {
       box-sizing: border-box;
-      font-family: Inter;
+      font-family: Poppins;
       margin: 0;
       padding: 0;
     }
@@ -870,35 +870,39 @@ function updateMoodDrift(userMood, contextScore) {
 function detectPersonalFact(text) {
   const t = text.toLowerCase();
 
-  // Pattern 1: I like X
-  if (t.startsWith("i like")) {
-    return { type: "like", item: text.split(/i like/i)[1].trim() };
-  }
+  // LIKE
+  if (t.startsWith("i like "))
+    return { type: "like", item: text.slice(7) };
 
-  // Pattern 2: I love X
-  if (t.startsWith("i love")) {
-    return { type: "love", item: text.split(/i love/i)[1].trim() };
-  }
+  // LOVE
+  if (t.startsWith("i love "))
+    return { type: "love", item: text.slice(7) };
 
-  // Pattern 3: I hate X
-  if (t.startsWith("i hate")) {
-    return { type: "hate", item: text.split(/i hate/i)[1].trim() };
-  }
+  // HATE
+  if (t.startsWith("i hate "))
+    return { type: "hate", item: text.slice(7) };
 
-  // Pattern 4: My favourite X is Y
-  const favMatch = text.match(/my favourite (.+?) is (.+)/i);
-  if (favMatch) {
-    return { type: "favorite", item: favMatch[2].trim() };
-  }
+  // FAVORITE GENERAL
+  if (t.includes("favourite ") || t.includes("favorite ")) {
+    const item = text.split(/favourite |favorite /i)[1];
 
-  // Pattern 5: favourite X (standalone)
-  const favMatch2 = text.match(/favourite (.+)/i);
-  if (favMatch2) {
-    return { type: "favorite", item: favMatch2[1].trim() };
+    // Sub-categories
+    if (t.includes("place")) return { type: "favorite_place", item };
+    if (t.includes("hero")) return { type: "favorite_hero", item };
+    if (t.includes("food")) return { type: "favorite_food", item };
+    if (t.includes("colour") || t.includes("color")) return { type: "favorite_color", item };
+    if (t.includes("movie")) return { type: "favorite_movie", item };
+    if (t.includes("song")) return { type: "favorite_song", item };
+    if (t.includes("animal")) return { type: "favorite_animal", item };
+    if (t.includes("person")) return { type: "favorite_person", item };
+
+    // fallback — general favorite
+    return { type: "favorite", item };
   }
 
   return null;
 }
+
 
 
 
@@ -916,20 +920,39 @@ function storeFact(item, type) {
 function answerPersonalQuestion(text) {
   const t = text.toLowerCase();
 
-  if (t.includes("favourite place"))
-    return topNode("place");
+  if (t.includes("favourite place") || t.includes("favorite place"))
+    return topNode("favorite_place");
 
-  if (t.includes("favourite hero"))
-    return topNode("hero");
+  if (t.includes("favourite hero") || t.includes("favorite hero"))
+    return topNode("favorite_hero");
 
-  if (t.includes("what do i love"))
-    return topNode("love");
+  if (t.includes("favourite food") || t.includes("favorite food"))
+    return topNode("favorite_food");
+
+  if (t.includes("favourite movie") || t.includes("favorite movie"))
+    return topNode("favorite_movie");
+
+  if (t.includes("favourite song") || t.includes("favorite song"))
+    return topNode("favorite_song");
+
+  if (t.includes("favourite animal") || t.includes("favorite animal"))
+    return topNode("favorite_animal");
+
+  if (t.includes("favourite colour") || t.includes("favorite color") || t.includes("favorite colour"))
+    return topNode("favorite_color");
 
   if (t.includes("what do i like"))
     return topNode("like");
 
+  if (t.includes("what do i love"))
+    return topNode("love");
+
+  if (t.includes("what do i hate"))
+    return topNode("hate");
+
   return null;
 }
+
 
 function answerFromMemory(query) {
   const q = query.toLowerCase();
@@ -1094,10 +1117,362 @@ function addNodeToGraph(text, who, ts) {
   saveNodes();
   drawGraph && drawGraph(); // if exists
 }
+/****************** Natural Memory Extractor (NME) v0.9 ******************/
+
+// Categories we support and keyword sets (loose forms)
+const NME_KEYWORDS = {
+  like:     ["like", "likes", "fav", "favorite", "favourite", "enjoy", "enjoys", "crazy for", "i'm into", "im into", "my fav"],
+  love:     ["love", "loves", "i love", "i'm in love", "im in love", "adore"],
+  hate:     ["hate", "hates", "can't stand", "cant stand", "dislike", "dislikes", "worst"],
+  place:    ["place", "spot", "location", "area", "my place", "hangout"],
+  movie:    ["movie", "film", "cinema"],
+  hero:     ["hero", "actor", "star", "idol"],
+  color:    ["color", "colour", "shade"],
+  food:     ["food", "dish", "cuisine"],
+  song:     ["song", "track"],
+  person:   ["person", "human", "someone"]
+};
+
+// Primary category keys we will store
+const NME_CATEGORIES = ["like","love","hate","place","movie","hero","color","food","song","person"];
+
+// memory store (category -> { item: weight })
+if (!window.NME_memory) {
+  window.NME_memory = JSON.parse(localStorage.getItem('mindchat_NME_memory_v1') || "{}");
+  // ensure keys exist
+  NME_CATEGORIES.forEach(k => { if (!window.NME_memory[k]) window.NME_memory[k] = {}; });
+}
+
+// persist memory
+function NME_save() {
+  localStorage.setItem('mindchat_NME_memory_v1', JSON.stringify(window.NME_memory));
+}
+
+// small normalize helper
+function NME_norm(s) {
+  if (!s) return '';
+  return s.trim().toLowerCase().replace(/["'.,!?;:()]/g, '').replace(/\s+/g, ' ');
+}
+
+/* Levenshtein distance for fuzzy matching */
+function levenshtein(a, b) {
+  a = a || ''; b = b || '';
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({length: m+1}, (_,i) => new Array(n+1).fill(0));
+  for (let i=0;i<=m;i++) dp[i][0] = i;
+  for (let j=0;j<=n;j++) dp[0][j] = j;
+  for (let i=1;i<=m;i++){
+    for (let j=1;j<=n;j++){
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+    }
+  }
+  return dp[m][n];
+}
+
+/* fuzzy similarity score 0..1 */
+function fuzzyScore(a, b) {
+  a = NME_norm(a); b = NME_norm(b);
+  if (!a || !b) return 0;
+  const ld = levenshtein(a, b);
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - (ld / maxLen);
+}
+
+/* find best existing match in a category (threshold default 0.7) */
+function NME_fuzzyMatchExisting(category, candidate, threshold = 0.72) {
+  candidate = NME_norm(candidate);
+  const pool = window.NME_memory[category] || {};
+  let best = null;
+  let bestScore = 0;
+  for (const item in pool) {
+    const s = fuzzyScore(item, candidate);
+    if (s > bestScore) { best = item; bestScore = s; }
+  }
+  if (bestScore >= threshold) return best;
+  return null;
+}
+
+/* extract candidate phrase from text given an index of keyword */
+function NME_extractAfterKeyword(text, keywordIndex, keywordLen) {
+  // choose substring after keyword
+  const after = text.slice(keywordIndex + keywordLen).trim();
+  if (!after) return null;
+  // truncate at common stopwords (like "because", "but", "and")
+  const stop = after.search(/\b(because|but|and|so|that|which|who|when|where)\b/);
+  const chunk = stop === -1 ? after : after.slice(0, stop);
+  // take first 5 words as candidate
+  return chunk.split(/\s+/).slice(0, 6).join(' ').replace(/^is\s+/,'').trim();
+}
+
+/* main extractor: returns {category, item} or null */
+function NME_extractMemory(text) {
+  if (!text) return null;
+  let s = text.toLowerCase().replace(/\s+/g,' ').trim();
+
+  // if short forms like "pizza fav" or "pizza is my fav"
+  // try patterns: "<item> fav", "<item> favourite", "<item> is my fav"
+  const shortFav = s.match(/(.{1,60})\s+(?:fav|favorite|favourite)$/i);
+  if (shortFav) {
+    return { category: 'like', item: shortFav[1].trim() };
+  }
+  const shortLove = s.match(/(.{1,60})\s+(?:love|loves)$/i);
+  if (shortLove) return { category: 'love', item: shortLove[1].trim() };
+
+  // iterate keywords for categories
+  for (const cat in NME_KEYWORDS) {
+    for (const kw of NME_KEYWORDS[cat]) {
+      const idx = s.indexOf(kw);
+      if (idx !== -1) {
+        // candidate after keyword like "i love ariana", "my favourite place is charminar"
+        let candidate = NME_extractAfterKeyword(s, idx, kw.length);
+        // sometimes phrase is "pizza is my fav" -> find "is my fav" then look left for item
+        if (!candidate) {
+          // look for patterns like "X is my favourite", "X is my fav"
+          const leftMatch = s.match(/(.{1,60})\s+is\s+(?:my\s+)?(?:fav|favorite|favourite|love|loves|hate)/i);
+          if (leftMatch) candidate = leftMatch[1].trim();
+        }
+        if (!candidate) continue;
+
+        // cleanup candidate
+        candidate = candidate.replace(/^(is|the|a)\s+/,'').trim();
+        if (candidate.length === 0) continue;
+
+        // determine canonical category (map some keyword groups to our store categories)
+        let category = cat;
+        // normalize specific mapping
+        if (cat === 'food') category = 'food';
+        if (cat === 'like' && kw.includes('fav')) category = 'like';
+        if (cat === 'love') category = 'love';
+        if (cat === 'hate') category = 'hate';
+
+        // further refine if contains subwords (movie, hero, color, place)
+        if (/movie|film|cinema/.test(candidate) && !['movie'].includes(category)) {
+          candidate = candidate.replace(/\b(movie|film|cinema)\b/,'').trim();
+          category = 'movie';
+        }
+
+        // final normalized item
+        const item = candidate.split(/[.?!,;]/)[0].trim();
+        if (item) return { category, item: item };
+      }
+    }
+  }
+
+  // fallback: try "my favourite X is Y" pattern (explicit)
+  const favPattern = text.match(/my\s+(favorite|favourite)\s+(place|movie|hero|color|colour|food|song|person)?\s*(?:is|:|-)?\s*(.+)/i);
+  if (favPattern) {
+    let sub = favPattern[2] ? favPattern[2].toLowerCase() : null;
+    let val = favPattern[3] ? favPattern[3].trim() : null;
+    if (val) {
+      // map sub to category
+      let cat = 'favorite';
+      if (sub === 'place') cat = 'place';
+      else if (sub === 'movie' || sub === 'film') cat = 'movie';
+      else if (sub === 'hero') cat = 'hero';
+      else if (sub === 'color' || sub === 'colour') cat = 'color';
+      else if (sub === 'food') cat = 'food';
+      else if (sub === 'song') cat = 'song';
+      else if (sub === 'person') cat = 'person';
+      return { category: cat, item: val };
+    }
+  }
+
+  return null;
+}
+
+/* store memory into NME_memory with weight boosting and fuzzy merge */
+function NME_store(category, item) {
+  if (!category || !item) return null;
+
+  category = category.toLowerCase();
+  if (!NME_CATEGORIES.includes(category) && !NME_CATEGORIES.includes(category.replace(/^favorite_?/,'favorite'))) {
+    // fallback map: map 'favorite' variants to 'like' for simplicity
+    if (category.startsWith('favorite')) category = 'like';
+    if (!NME_CATEGORIES.includes(category)) category = 'like';
+  }
+
+  const cleaned = NME_norm(item);
+
+  // fuzzy match existing in this category (use threshold 0.72)
+  const matched = NME_fuzzyMatchExisting(category, cleaned, 0.72);
+  const finalKey = matched || cleaned;
+
+  // increment weight
+  const bucket = window.NME_memory[category] || (window.NME_memory[category] = {});
+  bucket[finalKey] = (bucket[finalKey] || 0) + 1; // increment by 1 per mention
+
+  // small cap for sanity
+  if (bucket[finalKey] > 100) bucket[finalKey] = 100;
+
+  // save
+  window.NME_memory[category] = bucket;
+  NME_save();
+
+  return { category, item: finalKey, weight: bucket[finalKey] };
+}
+
+/* recall highest-weight item for a category or fuzzy search across categories */
+function NME_recallQuestion(query) {
+  if (!query) return null;
+  const q = query.toLowerCase();
+
+  // direct question mapping
+  if (q.includes("what do i like") || q.includes("what are my likes") || q.includes("what do i enjoy"))
+    return NME_top('like');
+
+  if (q.includes("who do i love") || q.includes("what do i love") || q.includes("what are my loves"))
+    return NME_top('love');
+
+  if (q.includes("what do i hate") || q.includes("what are my hates"))
+    return NME_top('hate');
+
+  if (q.includes("what is my favourite place") || q.includes("what is my favorite place") || q.includes("favourite place"))
+    return NME_top('place');
+
+  if (q.includes("what is my favourite movie") || q.includes("favorite movie"))
+    return NME_top('movie');
+
+  if (q.includes("what is my favourite hero") || q.includes("favorite hero") || q.includes("who is my favourite hero"))
+    return NME_top('hero');
+
+  if (q.includes("what is my favourite color") || q.includes("favorite color") || q.includes("what color do i like"))
+    return NME_top('color');
+
+  // otherwise fuzzy search across all categories
+  let best = { score: 0, category: null, item: null };
+  for (const cat of Object.keys(window.NME_memory)) {
+    for (const key of Object.keys(window.NME_memory[cat])) {
+      const s = fuzzyScore(q, key);
+      if (s > best.score) { best.score = s; best.category = cat; best.item = key; }
+    }
+  }
+  if (best.score > 0.45) return best.item;
+
+  return null;
+}
+
+/* return the top item in a category (highest weight) */
+function NME_top(category) {
+  const bucket = window.NME_memory[category] || {};
+  const items = Object.entries(bucket);
+  if (!items || items.length === 0) return null;
+  items.sort((a,b) => b[1] - a[1]);
+  return items[0][0]; // item text
+}
+
+/* helper to expose memory (for debug / UI) */
+function NME_dump() {
+  return JSON.parse(JSON.stringify(window.NME_memory));
+}
+
+/* integrate into send flow: call this to process incoming user text */
+function NME_processInput(text) {
+  const t = text.toLowerCase().trim();
+
+  // ------------------------------
+  // 1. LIKES / LOVES / HATES
+  // ------------------------------
+  if (t.startsWith("i like ")) {
+    const item = text.slice(7).trim();
+    NME_store("like", item);
+    return { action: "stored", res: { type: "like", item } };
+  }
+
+  if (t.startsWith("i love ")) {
+    const item = text.slice(7).trim();
+    NME_store("love", item);
+    return { action: "stored", res: { type: "love", item } };
+  }
+
+  if (t.startsWith("i hate ")) {
+    const item = text.slice(7).trim();
+    NME_store("hate", item);
+    return { action: "stored", res: { type: "hate", item } };
+  }
+
+  // ------------------------------
+  // 2. FAVOURITE THINGS (place, movie, color, hero)
+  // ------------------------------
+  const favPatterns = [
+    { key: "place", pattern: /favour?ite place is (.+)/i },
+    { key: "movie", pattern: /favour?ite movie is (.+)/i },
+    { key: "color", pattern: /favour?ite colou?r is (.+)/i },
+    { key: "hero",  pattern: /favour?ite hero is (.+)/i }
+  ];
+
+  for (const fav of favPatterns) {
+    const match = t.match(fav.pattern);
+    if (match) {
+      const item = match[1].trim();
+      NME_store(fav.key, item);
+      return { action: "stored", res: { type: fav.key, item } };
+    }
+  }
+
+  // ------------------------------
+  // 3. Recall Questions
+  // ------------------------------
+  if (t.includes("what do i like")) {
+    return { action: "recall", item: NME_recallOne("like") };
+  }
+  if (t.includes("who do i love")) {
+    return { action: "recall", item: NME_recallOne("love") };
+  }
+  if (t.includes("what do i hate")) {
+    return { action: "recall", item: NME_recallOne("hate") };
+  }
+  if (t.includes("favourite place")) {
+    return { action: "recall", item: NME_recallOne("place") };
+  }
+  if (t.includes("favourite movie")) {
+    return { action: "recall", item: NME_recallOne("movie") };
+  }
+  if (t.includes("favourite color")) {
+    return { action: "recall", item: NME_recallOne("color") };
+  }
+  if (t.includes("favourite hero")) {
+    return { action: "recall", item: NME_recallOne("hero") };
+  }
+
+  return { action: "none" };
+}
+
+// STORAGE
+function NME_store(type, item) {
+  memoryGraph.push({
+    type,
+    item,
+    weight: 1,
+    ts: Date.now()
+  });
+  localStorage.setItem("memoryGraph", JSON.stringify(memoryGraph));
+}
+
+// RECALL
+function NME_recallOne(type) {
+  const list = memoryGraph.filter(x => x.type === type);
+  if (list.length === 0) return "I don't know yet.";
+  return list.sort((a,b)=>b.weight-a.weight)[0].item;
+}
+
+
+/****************** END NME v0.9 ******************/
+
+
+
+
+/****************** END NME v0.9 ******************/
+
 
 /* ------------- Message send flow ------------- */
 /* ------------- Message send flow (fixed & integrated) ------------- */
 /* ------------- FIXED FULL MESSAGE FLOW (v0.9) ------------- */
+
+
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
@@ -1110,6 +1485,18 @@ async function sendMessage() {
   appendMessage(text, 'user', ts);
   addNodeToGraph(text, 'user', ts);
   userInput.value = '';
+
+  const nme = NME_processInput(text);
+    if (nme.action === 'stored') {
+      addMessage(`Got it — I remembered "${nme.res.item}".`, 'ai');
+      return;
+    }
+    if (nme.action === 'recall') {
+      addMessage(nme.item, 'ai');
+      return;
+    }
+
+
 
   // Show typing immediately
   setTyping(true);
@@ -1193,6 +1580,7 @@ if (memoryAnswer) {
 
   }, delay);
 }
+
 
 
 sendBtn.addEventListener('click', sendMessage);
