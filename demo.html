@@ -148,6 +148,13 @@ body {
 }
 
 
+#toggleSidebar{
+  display:none;
+}
+#toggleGraph{
+  display:none;
+}
+
 .chat-area {
   flex: 1;
   display: flex;
@@ -333,6 +340,13 @@ body {
   .side-graph.active {
     transform: translateX(0);
   }
+
+  #toggleSidebar{
+  display:flex;
+}
+#toggleGraph{
+  display:flex;
+}
    
   .header h1 {
     font-size: 1.1rem;
@@ -1472,6 +1486,313 @@ function NME_recallOne(type) {
 /* ------------- Message send flow (fixed & integrated) ------------- */
 /* ------------- FIXED FULL MESSAGE FLOW (v0.9) ------------- */
 
+/* ------------------ Step-1: Natural Fact Extraction (messy input) ------------------ */
+
+// small helper: remove emojis, punctuation, extra spaces, normalize repeated letters
+function normalizeText(s) {
+  if (!s || typeof s !== 'string') return '';
+  // remove emojis and most symbols
+  let t = s.normalize('NFKD').replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, ' ');
+  // replace punctuation with space
+  t = t.replace(/[^a-z0-9\s]/gi, ' ');
+  // collapse multiple spaces
+  t = t.replace(/\s+/g, ' ').trim();
+  // collapse repeated character runs (loose) e.g., pizzzaaa -> pizza
+  t = t.replace(/([a-z])\1{2,}/gi, '$1$1'); // keep up to two repeated chars
+  return t.toLowerCase();
+}
+
+// simple token overlap similarity
+function textSimilarity(a, b) {
+  if (!a || !b) return 0;
+  const A = new Set(a.split(/\s+/).filter(Boolean));
+  const B = new Set(b.split(/\s+/).filter(Boolean));
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  A.forEach(x => { if (B.has(x)) inter++; });
+  return inter / Math.max(A.size, B.size);
+}
+
+// fuzzy-correct an extracted item against existing memory items
+function fuzzyCorrectItem(item) {
+  // if item is falsy or not a string, return it unchanged (caller will handle nulls)
+  if (!item || typeof item !== 'string') return item;
+  const cand = item.toLowerCase().trim();
+  if (!cand) return item;
+
+  let best = { key: null, score: 0.0 };
+  for (const m of (memoryGraph || [])) {
+    if (!m || !m.node) continue;
+    const score = textSimilarity(cand, m.node.toLowerCase());
+    if (score > best.score) {
+      best = { key: m.node, score };
+    }
+  }
+  // If a good match is found, return canonical stored value, else return original item
+  return best.score > 0.5 ? best.key : item;
+}
+
+
+// categories dictionary: keywords -> normalized category id
+const CATEGORY_KEYWORDS = {
+  like: ["i like", "like", "i'm into", "im into", "i m into", "i'm a fan of", "i am into", "i enjoy", "enjoy", "my fav", "my favourite", "favorite", "favourite", "fave", "crazy for", "big fan of", "into"],
+  love: ["i love", "love", "luv", "i'm in love with", "i am in love with", "adore"],
+  hate: ["i hate", "hate", "dont like", "don't like", "can't stand", "cant stand", "hate it", "worst"],
+  place: ["place", "spot", "location", "area", "city", "town", "my spot", "my place"],
+  hero: ["hero", "actor", "star", "idol"],
+  movie: ["movie", "film", "cinema"],
+  color: ["color", "colour", "shade"],
+  food: ["food", "dish", "meal", "cuisine"],
+  song: ["song", "track"],
+  person: ["person", "someone", "friend"],
+  // fallback generic "favorite" to capture "favorite X"
+  favorite: ["favorite", "favourite", "fav"]
+};
+
+// try to guess category by scanning the text for keywords
+function guessCategoryFromText(t) {
+  for (const cat of Object.keys(CATEGORY_KEYWORDS)) {
+    for (const kw of CATEGORY_KEYWORDS[cat]) {
+      if (t.includes(kw)) return cat;
+    }
+  }
+  return null;
+}
+
+// extract probable item phrase given the sentence and guessed category
+function extractItemFromPhrase(origText, cat) {
+  const text = normalizeText(origText);
+  // common patterns to try: "i like X", "my favourite X is Y", "X is my fav", "i love X", "love X"
+  // we'll try multiple regex patterns (case-insensitive) on the normalized text
+  const patterns = [
+    /(?:i like|i love|i luv|i hate|i enjoy|im into|i'm into)\s+(.{1,80})$/,       // "i like pizza"
+    /(?:my favourite|my favorite|my fav|favorite|favourite)\s+(?:place|movie|hero|song|color|food|person)?\s*(?:is|:|-)?\s*(.{1,80})$/, // "my favourite place is X"
+    /(.{1,80})\s+(?:is my fav|is my favorite|is my favourite|is my spot|is my place)$/, // "pizza is my fav"
+    /(.{1,80})\s+(?:is my favourite|is my favorite|is my hero)$/, // "bahubali is my favourite movie"
+    /(?:my)\s+(?:best|fav|favourite)\s+(?:movie|place|hero|color)?\s*(?:is)?\s*(.{1,80})$/, // "my best movie bahubali"
+    /(?:favorite|favourite)\s+(.{1,80})$/, // "favorite pizza"
+    /(?:i'm crazy for|im crazy for|crazy for)\s+(.{1,80})$/, // "crazy for pizza"
+    /(?:i'm a fan of|im a fan of|a fan of)\s+(.{1,80})$/ // "a fan of ariana grande"
+  ];
+
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m && m[1]) {
+      const extracted = m[1].trim();
+      // remove trailing words that are category keywords (like "place", "movie") if present
+      const cleaned = extracted.replace(/\b(place|movie|hero|song|color|food|person|spot|city|town)\b/gi, '').trim();
+      return cleaned;
+    }
+  }
+
+  // fallback: if category is known, try to pull a noun-like phrase after the keyword
+  if (cat) {
+    for (const kw of CATEGORY_KEYWORDS[cat]) {
+      if (text.includes(kw)) {
+        const parts = text.split(kw);
+        if (parts[1]) {
+          const candidate = parts[1].trim().split(/\s{0,1}is\s{0,1}|\s{0,1}:-\s{0,1}/i)[0].trim();
+          if (candidate) return candidate;
+        }
+      }
+    }
+  }
+
+  // last fallback: take last 3 words (useful for short inputs like "pizza fav")
+  const toks = text.split(/\s+/).filter(Boolean);
+  if (toks.length <= 3) return toks.join(' ');
+  return toks.slice(-3).join(' ');
+}
+
+// core detection function (returns {type,item} or null)
+function detectPersonalFactV2(rawText) {
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length === 0) return null;
+
+  const tNorm = normalizeText(rawText);
+  // quick rejection: if looks like a question (we only want facts here)
+  const isQuestion = /^(what|who|where|when|how|why)\b/i.test(rawText.trim()) || rawText.trim().endsWith('?');
+  if (isQuestion) return null;
+
+  // guess category from normalized text
+  let cat = guessCategoryFromText(tNorm);
+
+  // try to extract a candidate phrase (may be undefined/null)
+  let extracted = extractItemFromPhrase(rawText, cat);
+  if (!extracted || typeof extracted !== 'string') {
+    // fallback: try to use the last few tokens from normalized text
+    const toks = tNorm.split(/\s+/).filter(Boolean);
+    extracted = toks.length ? toks.slice(-3).join(' ') : null;
+  }
+
+  if (!extracted || extracted.trim().length === 0) return null;
+
+  // normalize extracted item
+  const normalizedItem = normalizeText(extracted || '');
+  if (!normalizedItem) return null;
+
+  // If category was a generic "favorite", refine using words in the normalized text
+  if (cat === 'favorite') {
+    if (/\b(place|spot|city|town|location)\b/.test(tNorm)) cat = 'place';
+    else if (/\b(hero|actor|star)\b/.test(tNorm)) cat = 'hero';
+    else if (/\b(movie|film|cinema)\b/.test(tNorm)) cat = 'movie';
+    else if (/\b(color|colour|shade)\b/.test(tNorm)) cat = 'color';
+    else if (/\b(song|track)\b/.test(tNorm)) cat = 'song';
+  }
+
+  // canonicalize to our short types
+  const TYPE_MAP = {
+    like: 'like',
+    love: 'love',
+    hate: 'hate',
+    place: 'place',
+    hero: 'hero',
+    movie: 'movie',
+    color: 'color',
+    food: 'food',
+    song: 'song',
+    person: 'person'
+  };
+
+  const finalType = TYPE_MAP[cat] || (tNorm.includes('like') ? 'like' : null) || (tNorm.includes('love') ? 'love' : null);
+
+  if (!finalType) return null;
+
+  // fuzzy-correct item against existing memoryGraph (safe)
+  const corrected = fuzzyCorrectItem(normalizedItem) || normalizedItem;
+
+  return { type: finalType, item: corrected };
+}
+
+/* ------------------ Safe: Fact extraction + storage (patched) ------------------ */
+
+// fuzzy-correct an extracted item against existing memory items (safe)
+
+/* ------------------ Safe: Fact extraction + storage (patched) ------------------ */
+
+// fuzzy-correct an extracted item against existing memory items (safe)
+function fuzzyCorrectItem(item) {
+  // keep original if not a string
+  if (!item || typeof item !== "string") return item || "";
+  const cand = item.toLowerCase();
+  let best = { key: null, score: 0.0 };
+
+  // ensure memoryGraph is an array
+  if (!Array.isArray(memoryGraph)) memoryGraph = [];
+
+  for (const m of memoryGraph) {
+    // guard m.node
+    if (!m || !m.node) continue;
+    const score = textSimilarity(cand, String(m.node).toLowerCase());
+    if (score > best.score) {
+      best = { key: m.node, score };
+    }
+  }
+  // if found good match, return canonical; else return original item
+  return best.score > 0.5 ? best.key : item;
+}
+
+// core detection function (returns {type,item} or null)
+// robust: ensures no undeclared references and checks every variable
+function detectPersonalFactV2(rawText) {
+  if (!rawText || typeof rawText !== 'string' || rawText.trim().length === 0) return null;
+
+  // normalize + quick guards
+  const tNorm = normalizeText(rawText);
+  if (!tNorm) return null;
+
+  // quick rejection: question-like (we only extract facts)
+  const trimmed = rawText.trim();
+  const isQuestion = /^(what|who|where|when|how|why)\b/i.test(trimmed) || trimmed.endsWith('?');
+  if (isQuestion) return null;
+
+  // guess category (may be null)
+  let cat = guessCategoryFromText(tNorm); // expects lower-cased normalized text
+
+  // try extraction
+  const extractedRaw = extractItemFromPhrase(rawText, cat); // may return string or null
+  if (!extractedRaw || typeof extractedRaw !== 'string') return null;
+
+  // normalize extracted item safely
+  const normalizedItem = normalizeText(extractedRaw || '');
+  if (!normalizedItem) return null;
+
+  // fix category when it's ambiguous "favorite"
+  if (cat === 'favorite') {
+    if (/\b(place|spot|city|town|location)\b/.test(tNorm)) cat = 'place';
+    else if (/\b(hero|actor|star)\b/.test(tNorm)) cat = 'hero';
+    else if (/\b(movie|film|cinema)\b/.test(tNorm)) cat = 'movie';
+    else if (/\b(color|colour|shade)\b/.test(tNorm)) cat = 'color';
+    else if (/\b(song|track)\b/.test(tNorm)) cat = 'song';
+  }
+
+  // canonicalize
+  const TYPE_MAP = {
+    like: 'like',
+    love: 'love',
+    hate: 'hate',
+    place: 'place',
+    hero: 'hero',
+    movie: 'movie',
+    color: 'color',
+    food: 'food',
+    song: 'song',
+    person: 'person'
+  };
+
+  const finalType = TYPE_MAP[cat] || (tNorm.includes('like') ? 'like' : (tNorm.includes('love') ? 'love' : null));
+  if (!finalType) return null;
+
+  // fuzzy-correct item against existing memory (safe)
+  const corrected = fuzzyCorrectItem(normalizedItem);
+
+  // return canonical pair (use corrected or normalized)
+  return { type: finalType, item: (corrected && typeof corrected === 'string') ? corrected.trim() : normalizedItem.trim() };
+}
+
+// improved storeFact (merges duplicates, increases weight) - safe
+function storeFactV2(item, type) {
+  if (!item || typeof item !== 'string' || !type) return null;
+  // ensure memoryGraph exists
+  if (!Array.isArray(memoryGraph)) memoryGraph = [];
+
+  const nodeText = item.trim();
+  if (!nodeText) return null;
+
+  // find exact or case-insensitive match
+  const existing = memoryGraph.find(m => m && m.node && String(m.node).toLowerCase() === nodeText.toLowerCase() && m.type === type);
+  if (existing) {
+    existing.weight = Math.min(10, (existing.weight || 1) + 1); // cap weight
+    existing.timestamp = Date.now();
+    // persist
+    try { localStorage.setItem('mindchat_memoryGraph_v1', JSON.stringify(memoryGraph)); } catch(e) {}
+    return existing;
+  } else {
+    const newNode = {
+      node: nodeText,
+      type: type,
+      weight: 1,
+      timestamp: Date.now()
+    };
+    memoryGraph.push(newNode);
+    try { localStorage.setItem('mindchat_memoryGraph_v1', JSON.stringify(memoryGraph)); } catch(e) {}
+    return newNode;
+  }
+}
+
+/* convenience wrapper used in sendMessage flow */
+function detectAndStoreFact(rawText) {
+  const fact = detectPersonalFactV2(rawText);
+  if (fact && fact.type && fact.item) {
+    const stored = storeFactV2(fact.item, fact.type);
+    return stored ? { type: fact.type, item: stored.node } : null;
+  }
+  return null;
+}
+
+
+
+
+
 
 async function sendMessage() {
   const text = userInput.value.trim();
@@ -1517,8 +1838,14 @@ async function sendMessage() {
     // ------------------------------
     // 2. Store personal facts
     // ------------------------------
-   const fact = detectPersonalFact(text);
-if (fact) storeFact(fact.item, fact.type);
+  const fact = detectAndStoreFact(text);
+if (fact) {
+  // immediate friendly feedback (optional)
+  addMessage(`Got it — I noted your ${fact.type}: "${fact.item}"`, 'ai');
+  setTyping(false);
+  return;
+}
+
 
 
     // ------------------------------
