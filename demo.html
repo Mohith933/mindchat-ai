@@ -464,9 +464,16 @@ body {
 let memoryGraph = [];
 
     // stores group → [facts]
-let memoryWeights = {};   // stores strength of each fact
+let memoryWeights = [];   // stores strength of each fact
 let topNodes = [];        // most relevant memory keys
 let recentFacts = [];     // optional: for trend detection
+// v1.0 personal memory store
+let personalMemory = {
+  like: [],
+  love: [],
+  hate: [],
+  favorite: {} // category → item
+};
 
 
     const chatWindow = document.getElementById('chatWindow');
@@ -500,7 +507,7 @@ const personality = {
   reflectiveness: 0.65
 };
 
-    
+
     const STORAGE = {
       nodes: 'mindchat_nodes_v4',
       links: 'mindchat_links_v4',
@@ -931,41 +938,68 @@ function storeFact(item, type) {
 
 
 
-function answerPersonalQuestion(text) {
+function answerPersonalQuestionV2(text) {
   const t = text.toLowerCase();
 
-  if (t.includes("favourite place") || t.includes("favorite place"))
-    return topNode("favorite_place");
-
-  if (t.includes("favourite hero") || t.includes("favorite hero"))
-    return topNode("favorite_hero");
-
-  if (t.includes("favourite food") || t.includes("favorite food"))
-    return topNode("favorite_food");
-
-  if (t.includes("favourite movie") || t.includes("favorite movie"))
-    return topNode("favorite_movie");
-
-  if (t.includes("favourite song") || t.includes("favorite song"))
-    return topNode("favorite_song");
-
-  if (t.includes("favourite animal") || t.includes("favorite animal"))
-    return topNode("favorite_animal");
-
-  if (t.includes("favourite colour") || t.includes("favorite color") || t.includes("favorite colour"))
-    return topNode("favorite_color");
-
-  if (t.includes("what do i like"))
+  // LIKE
+  if (hasAny(t, ["what do i like", "my likes", "things i like", "what i usually like", "remind my likes"])) {
     return topNode("like");
+  }
 
-  if (t.includes("what do i love"))
+  // LOVE
+  if (hasAny(t, ["who do i love", "person i love", "i love who", "who i usually love"])) {
     return topNode("love");
+  }
 
-  if (t.includes("what do i hate"))
+  // HATE
+  if (hasAny(t, ["what do i hate", "things i hate", "my hates", "i dislike"])) {
     return topNode("hate");
+  }
+
+  // FAVOURITE PLACE
+  if (hasAny(t, ["favourite place", "favorite place", "my place", "place i like", "fav place"])) {
+    return topNode("place");
+  }
+
+  // FAVOURITE HERO
+  if (hasAny(t, ["favourite hero", "favorite hero", "my hero", "fav hero"])) {
+    return topNode("hero");
+  }
+
+  // FAVOURITE MOVIE
+  if (hasAny(t, ["favourite movie", "favorite movie", "my movie", "fav movie"])) {
+    return topNode("movie");
+  }
+
+  // FAVOURITE COLOR
+  if (hasAny(t, ["favourite color", "favorite color", "fav color", "colour i like"])) {
+    return topNode("color");
+  }
 
   return null;
 }
+
+
+function answerFromMemory(text) {
+  const t = text.toLowerCase();
+
+  if (t.includes("what do i like"))
+    return getTopMemory("like");
+
+  if (t.includes("who do i love"))
+    return getTopMemory("love");
+
+  if (t.includes("what do i hate"))
+    return getTopMemory("hate");
+
+  if (t.includes("favourite")) {
+    const match = t.match(/favourite (.+)/);
+    if (match) return memory.favorite[match[1]] || null;
+  }
+
+  return null;
+}
+
 
 
 function answerFromMemory(query) {
@@ -991,11 +1025,18 @@ function answerFromMemory(query) {
 
 
 
-function topNode(type) {
-  const items = memoryGraph.filter(n => n.type === type);
-  if (items.length === 0) return "I don't know yet!";
-  return items.sort((a,b)=>b.weight - a.weight)[0].node;
+function getTopMemory(type) {
+  const list = memory[type];
+  if (!list || list.length === 0) return null;
+
+  return list
+    .slice()
+    .sort((a, b) => b.weight - a.weight)[0]
+    .item;
 }
+
+
+
 
 
 
@@ -1513,6 +1554,15 @@ function textSimilarity(a, b) {
   return inter / Math.max(A.size, B.size);
 }
 
+function fuzzyClean(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")         // remove symbols
+    .replace(/\s+/g, " ")                // normalize spaces
+    .trim();
+}
+
+
 // fuzzy-correct an extracted item against existing memory items
 function fuzzyCorrectItem(item) {
   // if item is falsy or not a string, return it unchanged (caller will handle nulls)
@@ -1604,7 +1654,7 @@ function extractItemFromPhrase(origText, cat) {
   return toks.slice(-3).join(' ');
 }
 
-// core detection function (returns {type,item} or null)
+// // core detection function (returns {type,item} or null)
 function detectPersonalFactV2(rawText) {
   if (!rawText || typeof rawText !== 'string' || rawText.trim().length === 0) return null;
 
@@ -1653,15 +1703,51 @@ function detectPersonalFactV2(rawText) {
     person: 'person'
   };
 
-  const finalType = TYPE_MAP[cat] || (tNorm.includes('like') ? 'like' : null) || (tNorm.includes('love') ? 'love' : null);
+const finalType = TYPE_MAP[cat] || (tNorm.includes('like') ? 'like' : null) || (tNorm.includes('love') ? 'love' : null);
 
-  if (!finalType) return null;
+ if (!finalType) return null;
 
   // fuzzy-correct item against existing memoryGraph (safe)
   const corrected = fuzzyCorrectItem(normalizedItem) || normalizedItem;
 
   return { type: finalType, item: corrected };
 }
+
+function detectPersonalFactV2(text) {
+  const t = text.toLowerCase();
+
+  if (t.includes("i like")) {
+    return { type: "like", item: fuzzyClean(text.split("i like")[1]) };
+  }
+
+  if (t.includes("i love")) {
+    return { type: "love", item: fuzzyClean(text.split("i love")[1]) };
+  }
+
+  if (t.includes("i hate")) {
+    return { type: "hate", item: fuzzyClean(text.split("i hate")[1]) };
+  }
+
+  if (t.includes("favourite place") || t.includes("favorite place")) {
+    return { type: "place", item: fuzzyClean(text.split("place")[1]) };
+  }
+
+  if (t.includes("favourite hero") || t.includes("favorite hero")) {
+    return { type: "hero", item: fuzzyClean(text.split("hero")[1]) };
+  }
+
+  if (t.includes("favourite movie") || t.includes("favorite movie")) {
+    return { type: "movie", item: fuzzyClean(text.split("movie")[1]) };
+  }
+
+  if (t.includes("favourite color") || t.includes("favorite color")) {
+    return { type: "color", item: fuzzyClean(text.split("color")[1]) };
+  }
+
+  return null;
+}
+
+
 
 /* ------------------ Safe: Fact extraction + storage (patched) ------------------ */
 
@@ -1751,48 +1837,110 @@ function detectPersonalFactV2(rawText) {
 
 // improved storeFact (merges duplicates, increases weight) - safe
 function storeFactV2(item, type) {
-  if (!item || typeof item !== 'string' || !type) return null;
-  // ensure memoryGraph exists
-  if (!Array.isArray(memoryGraph)) memoryGraph = [];
+  const clean = item.trim().toLowerCase();
 
-  const nodeText = item.trim();
-  if (!nodeText) return null;
+  if (!clean) return;
 
-  // find exact or case-insensitive match
-  const existing = memoryGraph.find(m => m && m.node && String(m.node).toLowerCase() === nodeText.toLowerCase() && m.type === type);
+  const existing = memoryGraph.find(m => m.node === clean && m.type === type);
+
   if (existing) {
-    existing.weight = Math.min(10, (existing.weight || 1) + 1); // cap weight
+    existing.weight += 1;                // BOOST weight if repeated
     existing.timestamp = Date.now();
-    // persist
-    try { localStorage.setItem('mindchat_memoryGraph_v1', JSON.stringify(memoryGraph)); } catch(e) {}
-    return existing;
   } else {
-    const newNode = {
-      node: nodeText,
+    memoryGraph.push({
+      node: clean,
       type: type,
       weight: 1,
       timestamp: Date.now()
-    };
-    memoryGraph.push(newNode);
-    try { localStorage.setItem('mindchat_memoryGraph_v1', JSON.stringify(memoryGraph)); } catch(e) {}
-    return newNode;
+    });
   }
 }
 
-/* convenience wrapper used in sendMessage flow */
-function detectAndStoreFact(rawText) {
-  const fact = detectPersonalFactV2(rawText);
-  if (fact && fact.type && fact.item) {
-    const stored = storeFactV2(fact.item, fact.type);
-    return stored ? { type: fact.type, item: stored.node } : null;
+
+
+function detectAndStoreFact(text) {
+
+  // 1. strict detection (already working)
+  if (detectPersonalFact(text)) return true;
+
+  // 2. messy normalization
+  const norm = normalizeFact(text);
+  if (!norm) return false;
+
+  if (norm.type === "favorite") {
+    storeFavorite(norm.category, norm.value);
+  } else {
+    store(norm.type, norm.value);
   }
+
+  return true;
+}
+
+function store(type, value) {
+  value = value.trim();
+
+  const list = memory[type];
+  const found = list.find(x => x.item === value);
+
+  if (found) {
+    found.weight += 1;
+  } else {
+    list.push({ item: value, weight: 1 });
+  }
+}
+
+function storeFavorite(category, value) {
+  memory.favorite[category] = value.trim();
+}
+
+function normalizeFact(text) {
+  const t = text.toLowerCase();
+
+  // like patterns
+  if (t.match(/(i\s+)?(kinda\s+)?like\s+(.+)/))
+    return { type: "like", value: RegExp.$3 };
+
+  if (t.match(/(.+)\s+is\s+my\s+fav/))
+    return { type: "like", value: RegExp.$1 };
+
+  // love patterns
+  if (t.match(/(i\s+)?love\s+(.+)/))
+    return { type: "love", value: RegExp.$2 };
+
+  // hate patterns
+  if (t.match(/(i\s+)?hate\s+(.+)/))
+    return { type: "hate", value: RegExp.$2 };
+
+  // favorite patterns
+  if (t.match(/(.+)\s+is\s+my\s+favorite\s+(.+)/))
+    return { type: "favorite", category: RegExp.$2, value: RegExp.$1 };
+
+  if (t.match(/my\s+favorite\s+(.+)\s+is\s+(.+)/))
+    return { type: "favorite", category: RegExp.$1, value: RegExp.$2 };
+
   return null;
 }
 
 
 
+function sendMessage(text) {
 
+  // 1. Try storing fact
+  if (detectAndStoreFact(text)) {
+    reply("Got it — I remembered that 👍");
+    return;
+  }
 
+  // 2. Try memory recall
+  const memoryReply = answerFromMemory(text);
+  if (memoryReply) {
+    reply(memoryReply);
+    return;
+  }
+
+  // 3. Fallback
+  reply("Tell me more 🙂");
+}
 
 async function sendMessage() {
   const text = userInput.value.trim();
@@ -1807,6 +1955,14 @@ async function sendMessage() {
   addNodeToGraph(text, 'user', ts);
   userInput.value = '';
 
+  const recall = recallFromMemory(text);
+
+if (recall && recall !== "I don't know yet.") {
+  reply = recall;
+} else {
+  reply = generateAIReply(text);
+}
+
   const nme = NME_processInput(text);
     if (nme.action === 'stored') {
       addMessage(`Got it — I remembered "${nme.res.item}".`, 'ai');
@@ -1816,6 +1972,7 @@ async function sendMessage() {
       addMessage(nme.item, 'ai');
       return;
     }
+
 
 
 
@@ -1835,26 +1992,25 @@ async function sendMessage() {
     const mood = detectMood(text);
     const contextScore = computeContextScore(text);
 
-    // ------------------------------
-    // 2. Store personal facts
-    // ------------------------------
-  const fact = detectAndStoreFact(text);
-if (fact) {
-  // immediate friendly feedback (optional)
-  addMessage(`Got it — I noted your ${fact.type}: "${fact.item}"`, 'ai');
-  setTyping(false);
-  return;
-}
-
 
 
     // ------------------------------
     // 3. Try memory answer first
     // ------------------------------
-  let memoryAnswer = answerFromMemory(text);
-
+  let memoryAnswer = answerPersonalQuestionV2(text);
 if (memoryAnswer) {
-    addMessage(memoryAnswer, "ai");
+    appendMessage(memoryAnswer, "ai", Date.now());
+    setTyping(false);
+    return;
+}
+
+    // ------------------------------
+    // 2. Store personal facts
+    // ------------------------------
+const fact = detectPersonalFactV2(text);
+if (fact && !text.includes("?")) {   // 💥 prevents “tell me my likes”
+    storeFact(fact.item, fact.type);
+    appendMessage("Got it — I remembered \"" + fact.item + "\".", "ai", Date.now());
     return;
 }
 
@@ -1953,6 +2109,22 @@ userInput.addEventListener('keydown', (e) => {
   return Math.min(count / 4, 1); // more repetition = more importance
 }
 
+function detectRecallIntent(text) {
+  const t = text.toLowerCase();
+
+  if (t.includes("like")) return { type: "like" };
+  if (t.includes("love")) return { type: "love" };
+  if (t.includes("hate")) return { type: "hate" };
+
+  // favorites
+  if (t.includes("place")) return { type: "favorite", category: "place" };
+  if (t.includes("color")) return { type: "favorite", category: "color" };
+  if (t.includes("movie")) return { type: "favorite", category: "movie" };
+  if (t.includes("hero")) return { type: "favorite", category: "hero" };
+
+  return null;
+}
+
 
 function computeImportance(text, emotionScore) {
   const lengthScore = Math.min(text.length / 120, 1);   // up to +1
@@ -1967,6 +2139,16 @@ function computeImportance(text, emotionScore) {
 }
 
 
+function recallFromMemory(text) {
+  const intent = detectRecallIntent(text);
+  if (!intent) return null;
+
+  if (intent.type === "favorite") {
+    return favoriteOf(intent.category);
+  }
+
+  return topMemory(intent.type);
+}
 
 
     
@@ -2212,6 +2394,40 @@ if (n.emotionLabel && clusterCenters[n.emotionLabel]) {
         saveSessions();
         setActiveSession(defaultSessionId);
     }
+    function storeMemory(type, value, category = null) {
+  value = value.toLowerCase().trim();
+
+  if (type === "favorite") {
+    if (!personalMemory.favorite[category]) {
+      personalMemory.favorite[category] = { value, weight: 1 };
+    } else if (personalMemory.favorite[category].value === value) {
+      personalMemory.favorite[category].weight++;
+    } else {
+      personalMemory.favorite[category] = { value, weight: 1 };
+    }
+    return;
+  }
+
+  const list = personalMemory[type];
+  const existing = list.find(i => i.value === value);
+
+  if (existing) {
+    existing.weight++;
+    existing.lastSeen = Date.now();
+  } else {
+    list.push({ value, weight: 1, lastSeen: Date.now() });
+  }
+}
+function topMemory(type) {
+  const list = personalMemory[type];
+  if (!list || list.length === 0) return "I don't know yet.";
+
+  return list.sort((a,b)=>b.weight - a.weight)[0].value;
+}
+function favoriteOf(category) {
+  return personalMemory.favorite[category]?.value || "I don't know yet.";
+}
+
     renderMessages();
     requestAnimationFrame(drawGraph);
   </script>
